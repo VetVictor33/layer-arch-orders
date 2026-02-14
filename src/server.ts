@@ -2,7 +2,7 @@ import Fastify, {
   type FastifyInstance,
   type RouteShorthandOptions,
 } from "fastify";
-import { getEnv } from "./env.js";
+import { getEnv } from "@/env.js";
 
 const env = getEnv();
 const server: FastifyInstance = Fastify({
