@@ -13,7 +13,7 @@ A payment processing API with layered architecture.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20.19+
 - pnpm
 
 ### Setup
