@@ -103,7 +103,7 @@ O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber
    - Validar: email, UUID, regex para cartão e CVV
 
 3. **Rate limiting**
-   - 100 requisições por IP a cada 15 minutos
+   - N requisições por IP a cada X minutos
    - Implementar com middleware
 
 ## Observabilidade (MVP)
