@@ -5,8 +5,22 @@ import Fastify, {
 import { getEnv } from "@/env.js";
 
 const env = getEnv();
+
+const loggerConfig = {
+  level: env.LOG_LEVEL,
+  transport: {
+    target: "pino-pretty",
+    options: {
+      colorize: true,
+      translateTime: "SYS:standard",
+      ignore: "pid,hostname",
+      singleLine: false,
+    },
+  },
+};
+
 const server: FastifyInstance = Fastify({
-  logger: true,
+  logger: loggerConfig,
 });
 
 const opts: RouteShorthandOptions = {
