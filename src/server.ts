@@ -1,8 +1,6 @@
-import Fastify, {
-  type FastifyInstance,
-  type RouteShorthandOptions,
-} from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 import { getEnv } from "@/env.js";
+import { registerRoutes } from "@/routes.js";
 
 const env = getEnv();
 
@@ -23,24 +21,7 @@ const server: FastifyInstance = Fastify({
   logger: loggerConfig,
 });
 
-const opts: RouteShorthandOptions = {
-  schema: {
-    response: {
-      200: {
-        type: "object",
-        properties: {
-          pong: {
-            type: "string",
-          },
-        },
-      },
-    },
-  },
-};
-
-server.get("/ping", opts, async (request, reply) => {
-  return { pong: "it worked!" };
-});
+await registerRoutes(server);
 
 const start = async () => {
   try {
