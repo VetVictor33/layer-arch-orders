@@ -26,10 +26,10 @@ O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber
 
 ## Modelagem
 
-### Orders
+### Order (Postgres)
 
 ```javascript
-	model Orders
+	model Order
 	// <>Dados universais<>
 	id uuid
 	createdAt Date // UTC
@@ -46,12 +46,30 @@ O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber
 	paymentStatus Enum (PENDING | PAIED | DENIED | CANCELED)
 ```
 
+### IdempotencyKey (Redis)
+
+```javascript
+	Key: idempotencyKey (string - UUID)
+	Value: {
+		response: Object {
+			orderId: string,
+			paymentStatus: string,
+			message: string
+		},
+		createdAt: timestamp (ISO8601),
+		expiresAt: timestamp (ISO8601)
+	}
+	TTL: 86400 // 24 horas em segundos
+```
+
 ## Tecnologias e bibliotecas (JavaScript)
 
 - Typescript
 - PostgreSQL
 - Redis
+- Prisma
 - Zod
+- Docker
 
 ## Rotas da API
 
@@ -121,7 +139,7 @@ flowchart TD
     I --> E
 ```
 
-## Fluxograma da API - fila(MVP 0.2)
+## Fluxograma da API - fila (MVP 0.2)
 
 ### Compra
 
