@@ -1,11 +1,12 @@
 {
   "name": "layer-arch-orders",
   "version": "0.1.0",
-  "description": "A consistent order payment processor.",
-  "main": "index.js",
+  "description": "A consistent payment processor.",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch src/server.ts"
   },
   "keywords": [],
   "author": "@VetVictor33",
@@ -15,5 +16,8 @@
     "@types/node": "^25.2.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "fastify": "^5.7.4"
   }
 }
