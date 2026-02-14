@@ -21,6 +21,8 @@ O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber
   - Controllers (recebem a requisição)
   - Services (regra de negócios)
   - Repositories (acesso ao banco de dados)
+- Orientação a Objetos
+- Tipagem obrigatória
 
 # Critérios de desenvolvimento
 
