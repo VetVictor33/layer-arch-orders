@@ -71,8 +71,6 @@ O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber
 - Typescript
 - PostgreSQL
 - Redis
-- Prisma
-- Zod
 - Docker
 
 ### Secundárias
@@ -83,6 +81,79 @@ O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber
 - Resend (e-mail)
 - Pino (logger)
 - BullMQ (filas)
+
+## Segurança (MVP)
+
+### Princípios
+
+- **Nunca armazenar dados sensíveis**: Cartão de crédito só é trafegado para gateway, nunca armazenado nem logado
+- **Validação rigorosa**: Zod para validar entrada
+- **Sanitização**: Remover caracteres perigosos
+- **HTTPS obrigatório**: Comunicação criptografada
+
+### Implementação
+
+1. **Cartão de crédito**
+   - Enviar diretamente ao gateway (tokenização)
+   - Armazenar apenas `paymentId` (token do gateway)
+   - Nunca logar números de cartão ou CVV
+
+2. **Validação de entrada**
+   - Usar Zod para validar tipos, formatos e ranges
+   - Validar: email, UUID, regex para cartão e CVV
+
+3. **Rate limiting**
+   - 100 requisições por IP a cada 15 minutos
+   - Implementar com middleware
+
+## Observabilidade (MVP)
+
+### Estrutura de Log
+
+- Formato JSON estruturado
+- Campos: timestamp, level, service, traceId, context, message, metadata
+- Cada requisição deve ter um traceId único para rastreamento
+
+### Eventos a Logar
+
+| Evento                             | Level | Contexto                         |
+| ---------------------------------- | ----- | -------------------------------- |
+| Pedido recebido                    | INFO  | orderId, customerId              |
+| Validação falhou                   | WARN  | orderId, motivo                  |
+| Idempotência - duplicata detectada | INFO  | orderId, idempotencyKey          |
+| Enviado ao gateway                 | INFO  | orderId, gatewayId               |
+| Resposta do gateway recebida       | INFO  | orderId, paymentStatus           |
+| Email enfileirado                  | INFO  | orderId, emailType               |
+| Erro no gateway                    | ERROR | orderId, errorCode, errorMessage |
+| Retry de fila                      | WARN  | jobId, tentativa                 |
+
+### Ferramentas
+
+- **Logger**: Estruturado em JSON
+- **Centralização**: ELK Stack ou Datadog (pós-MVP)
+
+## Filas com Retry (MVP)
+
+### Sistema de Fila
+
+- **Tecnologia**: BullMQ (construído sobre Redis)
+- **Jobs críticos**:
+  1. Requisição ao gateway de pagamento
+  2. Envio de emails
+
+### Estratégia de Retry
+
+- **Máximo de tentativas**: 3
+- **Backoff**: Exponencial (2s → 4s → 8s)
+- **Falha final**: Dead Letter Queue
+
+### Dead Letter Queue
+
+Após 3 tentativas falhadas, o job entra em quarentena:
+
+- Não é reprocessado automaticamente
+- Disponível para investigação manual
+- Alerta deve ser gerado para DevOps
 
 ## Rotas da API
 
