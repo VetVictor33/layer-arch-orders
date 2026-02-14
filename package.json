@@ -1,0 +1,14 @@
+{
+  "name": "layer-arch-orders",
+  "version": "0.1.0",
+  "description": "A consistent order payment processor.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "@VetVictor33",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.1"
+}
