@@ -66,12 +66,23 @@ O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber
 
 ## Tecnologias e bibliotecas (JavaScript)
 
+### Principais
+
 - Typescript
 - PostgreSQL
 - Redis
 - Prisma
 - Zod
 - Docker
+
+### Secundárias
+
+- Fastify (Servidor)
+- Prisma (ORM)
+- Zod (validações)
+- Resend (e-mail)
+- Pino (logger)
+- BullMQ (filas)
 
 ## Rotas da API
 
