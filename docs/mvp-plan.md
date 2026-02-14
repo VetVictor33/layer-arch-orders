@@ -288,3 +288,167 @@ flowchart TD
     O --> P["Retorna sucesso ao cliente"]
     P --> E
 ```
+
+# Implementação
+
+## Faseamento de Tecnologias
+
+A implementação será feita de forma incremental, adotando novas tecnologias conforme necessário.
+
+### Fase 1 - MVP 0.1 (Base)
+
+**Escopo**: API síncrona básica sem fila
+
+**Stack**:
+
+- Node.js + Fastify
+- PostgreSQL (Orders)
+- Zod (validação)
+- Prisma (ORM)
+- Pino (logs)
+- HTTPS (comunicação criptografada)
+
+**Infraestrutura**:
+
+- 1 servidor Fastify
+- 1 banco PostgreSQL
+- 1 gateway de pagamento (fake/mock)
+
+---
+
+### Fase 2 - MVP 0.2 (Fila de Processamento)
+
+**Stack adicional**:
+
+- Redis (message broker)
+- BullMQ (fila de jobs)
+
+**Mudanças**:
+
+- Requisição entra em fila após validação
+- Worker processa pagamento assincronamente
+- Retry com backoff exponencial
+- Dead Letter Queue para falhas
+
+**Infraestrutura**:
+
+- 1 servidor Fastify
+- 1 banco PostgreSQL
+- 1 Redis
+- N workers de pagamento
+
+---
+
+### Fase 3 - MVP 0.3 (Idempotência + Rate Limiting)
+
+**Stack adicional**:
+
+- Redis (idempotency store)
+
+**Mudanças**:
+
+- Gerar `idempotencyKey` na API
+- Verificar se requisição já foi processada antes de fila
+- Cachear respostas por 24h em Redis
+- **Rate limiting por cliente**: Máximo de requisições por cliente/email por período
+- Implementar sliding window ou token bucket
+
+**Infraestrutura**:
+
+- Mesma do MVP 0.2
+- Separação lógica: Redis para cache vs Redis para fila (ou mesma instância com namespaces)
+
+---
+
+### Fase 4 - MVP 0.4 (Mensageria)
+
+**Stack adicional**:
+
+- Resend (serviço de email)
+- BullMQ (fila de emails)
+
+**Mudanças**:
+
+- Email de confirmação do pedido na fila
+- Email de status do pagamento na fila
+- Workers de email processam de forma independente
+
+**Infraestrutura**:
+
+- Mesma do MVP 0.3
+- 1 queue adicional para emails
+- N workers de email
+
+---
+
+## Diagrama de Adoção Tecnológica
+
+```
+MVP 0.1
+├─ Fastify
+├─ PostgreSQL
+├─ Zod
+└─ Pino
+
+    ↓ Adiciona
+
+MVP 0.2
+├─ Redis (fila)
+├─ BullMQ
+└─ Retry/DLQ
+
+    ↓ Adiciona
+
+MVP 0.3
+├─ Redis (cache)
+├─ Idempotência
+└─ Rate Limiting
+
+    ↓ Adiciona
+
+MVP 0.4
+├─ Resend
+├─ BullMQ (emails)
+└─ Notificações
+```
+
+---
+
+## Checklist de Implementação
+
+### MVP 0.1
+
+- [ ] Projeto Fastify + TypeScript
+- [ ] Modelo de dados (Prisma)
+- [ ] Validação com Zod
+- [ ] Rota [POST] /order
+- [ ] Rota [GET] /order/:id/status
+- [ ] Integração com gateway (mock)
+- [ ] Logs estruturados (Pino)
+- [ ] Docker Compose (PostgreSQL)
+
+### MVP 0.2
+
+- [ ] Docker Compose (Redis)
+- [ ] BullMQ setup
+- [ ] Worker de pagamento
+- [ ] Retry logic
+- [ ] Dead Letter Queue
+- [ ] Monitoramento de filas
+
+### MVP 0.3
+
+- [ ] Redis store para idempotência
+- [ ] Geração de idempotencyKey
+- [ ] Cache de respostas
+- [ ] TTL de 24h
+- [ ] Rate limiting por cliente
+- [ ] Sliding window ou token bucket
+
+### MVP 0.4
+
+- [ ] Resend API setup
+- [ ] Template de emails
+- [ ] BullMQ queue de emails
+- [ ] Worker de email
+- [ ] Eventos de email
