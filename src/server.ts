@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { getEnv } from "@/env.js";
 import { registerRoutes } from "@/routes.js";
+import { registerErrorHandler } from "@/middleware/errorHandler.js";
 
 const env = getEnv();
 
@@ -21,6 +22,7 @@ const server: FastifyInstance = Fastify({
   logger: loggerConfig,
 });
 
+registerErrorHandler(server);
 await registerRoutes(server);
 
 const start = async () => {
