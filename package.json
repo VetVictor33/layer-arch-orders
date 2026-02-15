@@ -1,5 +1,5 @@
 {
-  "name": "layer-arch-orders",
+  "name": "layer-arch-payments",
   "version": "0.1.0",
   "description": "A consistent payment processor.",
   "main": "server.js",
