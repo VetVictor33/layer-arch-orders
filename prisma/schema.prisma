@@ -23,8 +23,8 @@ model Order {
 	customerName      String
 	customerEmail     String
 	paymentType     PaymentType
-	paymentId     String
-	gatewayId     String
+	paymentId     String?
+	gatewayId     String?
 	paymentStatus PaymentStatus
 }
 
