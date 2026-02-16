@@ -1,41 +1,131 @@
 import type { Job } from "bullmq";
 import QueueManager from "@/libs/bullmq.js";
 import { QueueName } from "@/libs/queues.js";
-import PaymentGatewayMock from "@/services/payment-gateway-mock.js";
-import { OrderRepository } from "@/repositories/OrderRepository.js";
-import type {
-  PaymentRequest,
-  PaymentResponse,
-} from "@/services/payment-gateway-mock.js";
 import { logger } from "@/libs/logger.js";
+import {
+  PaymentProcessorService,
+  type PaymentProcessorResult,
+} from "@/services/payment-processor.js";
+import { DLQHandler, type JobFailureContext } from "@/workers/dlq-handler.js";
+import type { PaymentRequest } from "@/services/payment-gateway-mock.js";
 
-interface PaymentJobResult {
-  success: boolean;
-  payment: PaymentResponse;
+/**
+ * Registers the main payment processing worker
+ * Handles payment processing with retry and DLQ logic
+ */
+class PaymentWorkerRegistrar {
+  private queueManager: QueueManager;
+  private paymentProcessor: PaymentProcessorService;
+  private dlqHandler: DLQHandler;
+
+  constructor() {
+    this.queueManager = QueueManager.getInstance();
+    this.paymentProcessor = new PaymentProcessorService();
+    this.dlqHandler = new DLQHandler();
+  }
+
+  register(): void {
+    this.queueManager.registerWorker<PaymentRequest, PaymentProcessorResult>(
+      QueueName.PAYMENT_PROCESSING,
+      (job) => this.handlePaymentJob(job),
+    );
+  }
+
+  private async handlePaymentJob(
+    job: Job<PaymentRequest, PaymentProcessorResult>,
+  ): Promise<PaymentProcessorResult> {
+    try {
+      return await this.paymentProcessor.processPayment(job.data);
+    } catch (error) {
+      await this.handlePaymentError(job, error);
+      throw error;
+    }
+  }
+
+  private async handlePaymentError(
+    job: Job<PaymentRequest, PaymentProcessorResult>,
+    error: unknown,
+  ): Promise<void> {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    const context: JobFailureContext = {
+      jobId: job.id as string,
+      attemptsMade: job.attemptsMade + 1, // Current attempt count,
+      maxAttempts: this.queueManager.getDefaultMaxAttempts(),
+      sourceQueue: QueueName.PAYMENT_PROCESSING,
+      orderId: job.data.orderId,
+      error: errorMessage,
+    };
+
+    const movedToDLQ = await this.dlqHandler.handleJobFailure(context);
+
+    if (movedToDLQ) {
+      logger.error(
+        {
+          orderId: job.data.orderId,
+          jobId: job.id,
+          attempts: job.attemptsMade,
+          error: errorMessage,
+        },
+        "Payment processing failed permanently - moved to DLQ",
+      );
+    }
+  }
 }
 
+/**
+ * Registers the Dead Letter Queue monitoring worker
+ * Monitors and logs jobs that require manual intervention
+ */
+class DLQWorkerRegistrar {
+  private queueManager: QueueManager;
+
+  constructor() {
+    this.queueManager = QueueManager.getInstance();
+  }
+
+  register(): void {
+    this.queueManager.registerWorker<PaymentRequest, void>(
+      QueueName.PAYMENT_PROCESSING_DLQ,
+      (job) => this.handleDLQJob(job),
+    );
+  }
+
+  private async handleDLQJob(job: Job<PaymentRequest, void>): Promise<void> {
+    logger.warn(
+      {
+        orderId: job.data.orderId,
+        jobId: job.id,
+        amount: job.data.amount,
+        email: job.data.customerEmail,
+      },
+      "Dead Letter Queue: Payment job requires manual intervention",
+    );
+  }
+}
+
+/**
+ * Orchestrates the registration of all payment-related workers
+ */
+class PaymentWorkerOrchestrator {
+  private paymentWorkerRegistrar: PaymentWorkerRegistrar;
+  private dlqWorkerRegistrar: DLQWorkerRegistrar;
+
+  constructor() {
+    this.paymentWorkerRegistrar = new PaymentWorkerRegistrar();
+    this.dlqWorkerRegistrar = new DLQWorkerRegistrar();
+  }
+
+  register(): void {
+    this.paymentWorkerRegistrar.register();
+    this.dlqWorkerRegistrar.register();
+  }
+}
+
+/**
+ * Public API - registers all payment workers
+ */
 export const registerPaymentWorker = (): void => {
-  const queueManager = QueueManager.getInstance();
-
-  queueManager.registerWorker<PaymentRequest, PaymentJobResult>(
-    QueueName.PAYMENT_PROCESSING,
-    async (
-      job: Job<PaymentRequest, PaymentJobResult>,
-    ): Promise<PaymentJobResult> => {
-      const paymentService = new PaymentGatewayMock();
-      const repo = new OrderRepository();
-
-      const payment = await paymentService.processPayment(job.data);
-
-      const order = await repo.update(job.data.orderId, {
-        paymentStatus: payment.status,
-        paymentId: payment.paymentId,
-        gatewayId: payment.gatewayId,
-      });
-
-      logger.info(`Payment for order ${order.id} successfully processed.`);
-
-      return { success: true, payment };
-    },
-  );
+  new PaymentWorkerOrchestrator().register();
 };
