@@ -31,10 +31,19 @@ export default class PaymentGatewayMock {
    * - Odd price -> PAID
    * - Even price -> DENIED
    * - Zero or negative -> ERROR
+   * - 50% chance to randomly throw error for retry testing
    */
   async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
-    // Simulate processing delay
-    await this.delay(100);
+    // Simulate processing delay (random between 1-60 seconds)
+    const randomDelay = Math.random() * 60000;
+    await this.delay(randomDelay);
+
+    // Chance to randomly throw error for testing queue retries
+    if (Math.random() < 0.5) {
+      throw new Error(
+        `Simulated payment gateway error for order ${request.orderId}. Queue will retry if there are attempts remaining.`,
+      );
+    }
 
     const paymentId = this.generatePaymentId();
 
