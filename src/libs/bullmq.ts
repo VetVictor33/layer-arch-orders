@@ -111,9 +111,27 @@ export default class QueueManager {
 
     worker.on("failed", (job, err) => {
       logger.error(
-        { jobId: job?.id, queueName, error: err.message },
+        {
+          jobId: job?.id,
+          queueName,
+          error: err.message,
+          attempts: job?.attemptsMade,
+        },
         "Job failed",
       );
+
+      // Move to DLQ after max attempts
+      if (job && job.attemptsMade >= this.defaultMaxAttempts) {
+        logger.warn(
+          {
+            jobId: job.id,
+            queueName,
+            attempts: job.attemptsMade,
+            error: err.message,
+          },
+          "Job moved to Dead Letter Queue (max retries exceeded)",
+        );
+      }
     });
 
     this.workers.set(queueName, worker);
@@ -183,6 +201,50 @@ export default class QueueManager {
 
     const state = await job.getState();
     return state;
+  }
+
+  /**
+   * Move a failed job to Dead Letter Queue
+   */
+  async moveJobToDLQ<T = any>(
+    sourceQueueName: QueueNameType,
+    jobId: string,
+    dlqQueueName: QueueNameType,
+    error: string,
+  ): Promise<void> {
+    const sourceQueue = this.getQueue(sourceQueueName);
+    const dlqQueue = this.getQueue(dlqQueueName);
+
+    const job = await sourceQueue.getJob(jobId);
+    if (!job) {
+      logger.warn(
+        { jobId, sourceQueue: sourceQueueName },
+        "Job not found for DLQ transfer",
+      );
+      return;
+    }
+
+    // Get job data
+    const jobData = job.data;
+
+    // Add to DLQ
+    await dlqQueue.add(dlqQueueName, jobData, {
+      attempts: 1,
+    });
+
+    logger.info(
+      {
+        jobId,
+        sourceQueue: sourceQueueName,
+        dlqQueue: dlqQueueName,
+        error,
+      },
+      "Job moved to Dead Letter Queue",
+    );
+  }
+
+  getDefaultMaxAttempts(): number {
+    return this.defaultMaxAttempts;
   }
 
   /**
