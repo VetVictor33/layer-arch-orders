@@ -4,6 +4,7 @@ import {
   QueueEvents,
   type Job,
   type BackoffOptions,
+  type JobsOptions,
 } from "bullmq";
 import { getEnv } from "@/env.js";
 import { logger } from "@/libs/logger.js";
@@ -125,11 +126,7 @@ export default class QueueManager {
   async addJob<T = any>(
     queueName: QueueNameType,
     data: T,
-    options?: {
-      delay?: number;
-      attempts?: number;
-      backoff?: { type: string; delay: number };
-    },
+    options?: JobsOptions,
   ): Promise<string> {
     const queue = this.getQueue(queueName);
 
