@@ -40,6 +40,12 @@ class BullBoardManager {
       new BullMQAdapter(queueManager.getQueue(QueueName.EMAIL_NOTIFICATIONS), {
         readOnlyMode: false,
       }),
+      new BullMQAdapter(
+        queueManager.getQueue(QueueName.PAYMENT_PROCESSING_DLQ),
+        {
+          readOnlyMode: true, // DLQ is read-only (no retry/delete operations)
+        },
+      ),
     ];
 
     // Create the board with all queues
