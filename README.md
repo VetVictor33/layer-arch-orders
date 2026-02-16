@@ -7,6 +7,8 @@ A payment processing API with layered architecture, featuring deterministic paym
 - **Runtime**: Node.js + TypeScript
 - **Server**: Fastify
 - **Database**: PostgreSQL with Prisma ORM
+- **Message Queue**: Redis + BullMQ
+- **Queue Dashboard**: Bull Board
 - **Validation**: Zod
 - **Logging**: Pino
 - **Docker**: Docker Compose for local development
@@ -15,18 +17,25 @@ A payment processing API with layered architecture, featuring deterministic paym
 
 ```
 src/
-  ├── controllers/     # HTTP request handlers
-  ├── services/        # Business logic layer
-  ├── repositories/    # Data access layer
-  ├── middleware/      # Request/response middleware
+  ├── controllers/      # HTTP request handlers
+  ├── services/         # Business logic layer
+  ├── repositories/     # Data access layer
+  ├── workers/          # BullMQ job workers
+  ├── middleware/       # Request/response middleware
+  ├── libs/
+  │   ├── bullmq.ts     # Queue manager singleton
+  │   ├── bullboard.ts  # Queue dashboard setup
+  │   ├── queues.ts     # Type-safe queue enums
+  │   └── logger.ts     # Pino logger configuration
   ├── global/
-  │   ├── errors/      # Custom error classes
+  │   ├── errors/       # Custom error classes
   │   ├── errorHandlers/  # Error handling strategies
-  │   └── schemas/     # Validation schemas (Zod)
-  └── server.ts        # Fastify server setup
+  │   └── schemas/      # Validation schemas (Zod)
+  └── server.ts         # Fastify server setup
 prisma/
-  ├── schema.prisma    # Database schema
-  └── migrations/      # Database migrations
+  ├── schema.prisma     # Database schema
+  └── migrations/       # Database migrations
+docker-compose.yml      # PostgreSQL + Redis setup
 ```
 
 ## Getting Started
@@ -45,7 +54,7 @@ pnpm install
 
 ### Database Setup
 
-Start PostgreSQL container:
+Start PostgreSQL and Redis containers:
 
 ```bash
 pnpm run db:up
@@ -62,6 +71,16 @@ Create migration (after schema changes):
 ```bash
 pnpm run db:migrate-dev <migration-name>
 ```
+
+### Queue Monitoring
+
+Access Bull Board dashboard for queue monitoring:
+
+```
+http://localhost:3333/admin/queues
+```
+
+Monitor jobs, view statuses, inspect failed jobs in Dead Letter Queue.
 
 ### Development
 
@@ -85,15 +104,34 @@ pnpm start
 
 ## Features
 
-- **Deterministic Payment Processing**:
+### Payment Processing
+
+- **Deterministic Logic**:
   - Odd prices → Payment approved
   - Even prices → Payment denied
   - Zero/negative prices → Error
-- **Mock Payment Gateway**: Full payment processing simulation
-- **Layered Architecture**: Controllers → Services → Repositories
+- **Mock Payment Gateway**: Full payment processing simulation with random delays (0-60s)
+- **Realistic Failures**: 50% failure rate for testing retry mechanisms
+
+### Queue System (BullMQ + Redis)
+
+- **Asynchronous Processing**: Payment jobs processed in background queue
+- **Automatic Retries**: 3 attempts with exponential backoff
+- **Dead Letter Queue**: Failed jobs moved to DLQ for manual investigation
+- **Job Monitoring**: Bull Board dashboard for real-time queue inspection
+
+### Architecture
+
+- **Layered Design**: Controllers → Services → Repositories
 - **Type-Safe**: Full TypeScript with strict typing
-- **Validation**: Zod schemas for request validation
-- **Error Handling**: Comprehensive error handling system
+- **OOP Patterns**: Service classes, handler classes, worker registrars
+- **Clean Separation**: Payment processing, DLQ handling, queue management isolated
+
+### Validation & Error Handling
+
+- **Zod Schemas**: Request validation for order and payment data
+- **Comprehensive Error Handling**: Custom error classes and handlers
+- **Structured Logging**: Pino JSON logs with context
 
 ## API Endpoints
 
@@ -101,7 +139,7 @@ pnpm start
 
 **POST** `/order`
 
-Creates a new order and processes payment.
+Creates a new order and processes payment asynchronously.
 
 Request body:
 
@@ -127,10 +165,52 @@ Request body:
 }
 ```
 
+Response:
+
+```json
+{
+  "orderId": "uuid",
+  "paymentStatus": "PENDING",
+  "message": "Order created successfully. Payment processing in queue."
+}
+```
+
+### Get Order Payment Status
+
+**GET** `/order/:id/payment-status`
+
+Returns the current payment status of an order.
+
+Response:
+
+```json
+{
+  "orderId": "uuid",
+  "paymentStatus": "PENDING|PAID|DENIED|CANCELED",
+  "paymentId": "PAY_xxx",
+  "gatewayId": "MOCK_GATEWAY_001"
+}
+```
+
+## Workflow
+
+1. **Client sends order** → POST `/order`
+2. **Order saved immediately** with PENDING status
+3. **Payment job enqueued** to Redis/BullMQ
+4. **Worker processes payment** asynchronously
+5. **Retry mechanism** (up to 3 attempts) if payment fails
+6. **Dead Letter Queue** for permanent failures
+7. **Order status updated** when payment completes
+8. **Monitor via Bull Board** at `/admin/queues`
+
 ## Project Status
 
 **MVP 0.1** - Core payment processing implemented
 
-**MVP 0.2** - Next
+**MVP 0.2** - Asynchronous payment processing
 
-See [MVP Plan](./docs/mvp-plan.md) for detailed roadmap and architecture specifications.
+**MVP 0.3** (Idempotency) - Next
+
+**MVP 0.4** (Email notifications) - Future
+
+See [MVP Plan](./docs/mvp-plan.md) for detailed roadmap and architecture
