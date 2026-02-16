@@ -7,6 +7,7 @@ import type {
   PaymentRequest,
   PaymentResponse,
 } from "@/services/payment-gateway-mock.js";
+import { logger } from "@/libs/logger.js";
 
 interface PaymentJobResult {
   success: boolean;
@@ -26,11 +27,13 @@ export const registerPaymentWorker = (): void => {
 
       const payment = await paymentService.processPayment(job.data);
 
-      await repo.update(job.data.orderId, {
+      const order = await repo.update(job.data.orderId, {
         paymentStatus: payment.status,
         paymentId: payment.paymentId,
         gatewayId: payment.gatewayId,
       });
+
+      logger.info(`Payment for order ${order.id} successfully processed.`);
 
       return { success: true, payment };
     },
