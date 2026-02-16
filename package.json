@@ -9,8 +9,10 @@
     "build": "tsc && tsc-alias",
     "start": "node dist/server.js",
     "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down",
     "db:migrate-dev": "prisma migrate dev",
-    "db:sync": "prisma migrate deploy"
+    "db:sync": "prisma migrate deploy",
+    "redis:ui": "pnpm dlx redis-commander@0.9.0 --redis-host localhost --redis-port 6379 --redis-password local --port 8081"
   },
   "keywords": [],
   "author": "@VetVictor33",
