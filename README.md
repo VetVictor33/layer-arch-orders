@@ -130,6 +130,7 @@ Request body:
 ## Project Status
 
 **MVP 0.1** - Core payment processing implemented
+
 **MVP 0.2** - Next
 
 See [MVP Plan](./docs/mvp-plan.md) for detailed roadmap and architecture specifications.
