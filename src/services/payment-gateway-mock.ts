@@ -1,4 +1,5 @@
 import type { PaymentStatus } from "@/generated/prisma/enums.js";
+import { logger } from "@/libs/logger.js";
 
 export interface CardData {
   number: string;
@@ -31,10 +32,25 @@ export default class PaymentGatewayMock {
    * - Odd price -> PAID
    * - Even price -> DENIED
    * - Zero or negative -> ERROR
+   * - 50% chance to randomly throw error for retry testing
    */
   async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
-    // Simulate processing delay
-    await this.delay(100);
+    // Simulate processing delay (random between 1-60 seconds)
+    const randomDelay = Math.random() * 60000;
+    // Chance to randomly throw error for testing queue retries
+    const shouldFail = Math.random() < 0.5;
+
+    logger.info(
+      `Job for order ${request.orderId} will ${shouldFail ? "" : "not"} fail after ${randomDelay / 1000}s`,
+    );
+
+    await this.delay(randomDelay);
+
+    if (shouldFail) {
+      throw new Error(
+        `Simulated payment gateway error for order ${request.orderId}. Queue will retry if there are attempts remaining.`,
+      );
+    }
 
     const paymentId = this.generatePaymentId();
 

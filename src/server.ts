@@ -2,27 +2,26 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { getEnv } from "@/env.js";
 import { registerRoutes } from "@/routes.js";
 import { registerErrorHandler } from "@/middleware/errorHandler.js";
+import { registerPaymentWorker } from "@/workers/payment-processor.worker.js";
+import { bullBoardManager } from "@/libs/bullboard.js";
+import { LOGGER_CONFIG } from "@/libs/logger.js";
 
 const env = getEnv();
 
-const loggerConfig = {
-  level: env.LOG_LEVEL,
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-      translateTime: "SYS:standard",
-      ignore: "pid,hostname",
-      singleLine: false,
-    },
-  },
-};
-
 const server: FastifyInstance = Fastify({
-  logger: loggerConfig,
+  logger: LOGGER_CONFIG,
+  disableRequestLogging: true,
 });
 
 registerErrorHandler(server);
+registerPaymentWorker();
+
+// Initialize Bull Board BEFORE registering routes
+if (env.NODE_ENV == "development") {
+  bullBoardManager.initializeBoard();
+  bullBoardManager.registerRoutes(server);
+}
+
 await registerRoutes(server);
 
 const start = async () => {

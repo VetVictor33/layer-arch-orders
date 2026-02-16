@@ -1,6 +1,7 @@
 import { AppError } from "@/global/errors/AppError.js";
 import { OrderSchema } from "@/global/schemas/orders.js";
 import OrderProcessorService from "@/services/order-processor.js";
+import GetOrderPaymentStatusService from "@/services/get-order-payment-status.js";
 import type { FastifyInstance } from "fastify";
 
 export const orderRouters = [
@@ -11,14 +12,21 @@ export const orderRouters = [
       const response = await new OrderProcessorService().execute(parsedBody);
 
       return reply.code(201).send({
-        response: response,
+        ...response,
         timestamp: new Date().toISOString(),
       });
     });
   },
   async (server: FastifyInstance) => {
-    server.get("/order/:id/status", async (request, reply) => {
-      throw new AppError(500, "Not implemented");
+    server.get("/order/:id/payment-status", async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const response = await new GetOrderPaymentStatusService().execute(id);
+
+      return reply.code(200).send({
+        ...response,
+        timestamp: new Date().toISOString(),
+      });
     });
   },
 ];

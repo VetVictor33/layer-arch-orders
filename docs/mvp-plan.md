@@ -429,12 +429,12 @@ MVP 0.4
 
 ### MVP 0.2
 
-- [ ] Docker Compose (Redis)
-- [ ] BullMQ setup
-- [ ] Worker de pagamento
-- [ ] Retry logic
-- [ ] Dead Letter Queue
-- [ ] Monitoramento de filas
+- [x] Docker Compose (Redis)
+- [x] BullMQ setup
+- [x] Worker de pagamento
+- [x] Retry logic
+- [x] Dead Letter Queue
+- [x] Monitoramento de filas
 
 ### MVP 0.3
 
