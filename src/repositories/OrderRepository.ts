@@ -31,11 +31,14 @@ export class OrderRepository extends RepositoryBase<Order> {
   }
 
   async update(id: string, data: UpdateOrderDTO): Promise<Order> {
-    return this.throwNotImplemented()!;
+    return this.prisma.order.update({
+      where: { id },
+      data,
+    });
   }
 
   async findById(id: string): Promise<Order | null> {
-    return this.throwNotImplemented()!;
+    return this.prisma.order.findUnique({ where: { id } });
   }
 
   async delete(id: string): Promise<void> {
