@@ -9,3 +9,26 @@ services:
       POSTGRESQL_USERNAME: docker
       POSTGRESQL_PASSWORD: docker
       POSTGRESQL_DATABASE: layer-arch-payments
+  redis:
+    image: redislabs/redisearch:latest
+    ports:
+      - "6379:6379"
+    command:
+      - redis-server
+      - --requirepass "local"
+      - --loadmodule /usr/lib/redis/modules/rejson.so
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "local", "ping"]
+      interval: 5s
+
+  serverless-redis-http:
+    image: hiett/serverless-redis-http:latest
+    ports:
+      - "8079:80"
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: "local"
+      SRH_CONNECTION_STRING: "redis://default:local@redis:6379"
+    depends_on:
+      redis:
+        condition: service_healthy
