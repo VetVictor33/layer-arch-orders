@@ -9,7 +9,8 @@
     "build": "tsc && tsc-alias",
     "start": "node dist/server.js",
     "db:up": "docker-compose up -d",
-    "db:migrate-dev": "prisma migrate dev"
+    "db:migrate-dev": "prisma migrate dev",
+    "db:sync": "prisma migrate deploy"
   },
   "keywords": [],
   "author": "@VetVictor33",
