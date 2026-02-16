@@ -418,14 +418,14 @@ MVP 0.4
 
 ### MVP 0.1
 
-- [ ] Projeto Fastify + TypeScript
-- [ ] Modelo de dados (Prisma)
-- [ ] Validação com Zod
-- [ ] Rota [POST] /order
-- [ ] Rota [GET] /order/:id/status
-- [ ] Integração com gateway (mock)
-- [ ] Logs estruturados (Pino)
-- [ ] Docker Compose (PostgreSQL)
+- [x] Projeto Fastify + TypeScript
+- [x] Modelo de dados (Prisma)
+- [x] Validação com Zod
+- [x] Rota [POST] /order
+- [x] Rota [GET] /order/:id/status
+- [x] Integração com gateway (mock)
+- [x] Logs estruturados (Pino)
+- [x] Docker Compose (PostgreSQL)
 
 ### MVP 0.2
 
