@@ -12,6 +12,7 @@
     "db:down": "docker-compose down",
     "db:migrate-dev": "prisma migrate dev",
     "db:sync": "prisma migrate deploy",
+    "sql:ui": "pnpm dlx prisma studio",
     "redis:ui": "pnpm dlx redis-commander@0.9.0 --redis-host localhost --redis-port 6379 --redis-password local --port 8081"
   },
   "keywords": [],
@@ -37,6 +38,7 @@
     "fastify": "^5.7.4",
     "pg": "^8.18.0",
     "pino": "^10.3.1",
+    "redis": "^5.11.0",
     "zod": "^4.3.6"
   }
 }

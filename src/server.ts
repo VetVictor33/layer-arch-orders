@@ -5,12 +5,20 @@ import { registerErrorHandler } from "@/middleware/errorHandler.js";
 import { registerPaymentWorker } from "@/workers/payment-processor.worker.js";
 import { bullBoardManager } from "@/libs/bullboard.js";
 import { LOGGER_CONFIG } from "@/libs/logger.js";
+import { registerRateLimitMiddleware } from "@/middleware/rateLimit.js";
+import { RATE_LIMIT_CONFIGS } from "@/config/rate-limit-configs.js";
+import { ROUTES } from "@/config/routes-paths.js";
 
 const env = getEnv();
 
 const server: FastifyInstance = Fastify({
   logger: LOGGER_CONFIG,
   disableRequestLogging: true,
+});
+
+registerRateLimitMiddleware(server, {
+  config: RATE_LIMIT_CONFIGS.GLOBAL,
+  routesToSkip: [ROUTES.BULLBOARD.BASE],
 });
 
 registerErrorHandler(server);

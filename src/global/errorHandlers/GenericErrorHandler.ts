@@ -1,6 +1,7 @@
 import { getEnv } from "@/env.js";
 import { AppError } from "@/global/errors/AppError.js";
 import { ErrorHandlerBase, type ErrorResponse } from "./ErrorHandlerBase.js";
+import { DateUtils } from "@/utils/date.js";
 
 export class GenericErrorHandler extends ErrorHandlerBase {
   canHandle(): boolean {
@@ -20,7 +21,7 @@ export class GenericErrorHandler extends ErrorHandlerBase {
     return {
       statusCode,
       message,
-      timestamp: new Date().toISOString(),
+      timestamp: DateUtils.toUtcDate(DateUtils.now()),
     };
   }
 }

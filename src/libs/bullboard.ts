@@ -6,6 +6,7 @@ import { logger } from "@/libs/logger.js";
 import QueueManager from "@/libs/bullmq.js";
 import { QueueName } from "@/libs/queues.js";
 import { getEnv } from "@/env.js";
+import { ROUTES } from "@/config/routes-paths.js";
 
 /**
  * Bull Board - Queue visualization dashboard
@@ -16,7 +17,7 @@ class BullBoardManager {
 
   constructor() {
     this.fastifyAdapter = new FastifyAdapter();
-    this.fastifyAdapter.setBasePath("/admin/queues");
+    this.fastifyAdapter.setBasePath(ROUTES.BULLBOARD.BASE);
   }
 
   /**
@@ -74,11 +75,11 @@ class BullBoardManager {
    */
   registerRoutes(fastify: FastifyInstance): void {
     fastify.register(this.fastifyAdapter.registerPlugin(), {
-      prefix: "/admin/queues",
+      prefix: ROUTES.BULLBOARD.BASE,
     });
 
     logger.info(
-      `Bull Board routes registered at /admin/queues - Access UI at http://localhost:${getEnv().PORT}/admin/queues`,
+      `Bull Board routes registered at ${ROUTES.BULLBOARD.BASE} - Access UI at http://localhost:${getEnv().PORT}${ROUTES.BULLBOARD.BASE}`,
     );
   }
 }

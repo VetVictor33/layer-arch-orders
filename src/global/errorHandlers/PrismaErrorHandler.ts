@@ -1,5 +1,6 @@
 import { getEnv } from "@/env.js";
 import { ErrorHandlerBase, type ErrorResponse } from "./ErrorHandlerBase.js";
+import { DateUtils } from "@/utils/date.js";
 
 export class PrismaErrorHandler extends ErrorHandlerBase {
   canHandle(error: Error): boolean {
@@ -27,7 +28,7 @@ export class PrismaErrorHandler extends ErrorHandlerBase {
     return {
       statusCode,
       message,
-      timestamp: new Date().toISOString(),
+      timestamp: DateUtils.toUtcDate(DateUtils.now()),
     };
   }
 }

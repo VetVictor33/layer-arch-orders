@@ -2,11 +2,14 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ZodErrorHandler } from "@/global/errorHandlers/ZodErrorHandler.js";
 import { PrismaErrorHandler } from "@/global/errorHandlers/PrismaErrorHandler.js";
 import { FastifyValidationErrorHandler } from "@/global/errorHandlers/FastifyValidationErrorHandler.js";
+import { RateLimitErrorHandler } from "@/global/errorHandlers/RateLimitErrorHandler.js";
 import { GenericErrorHandler } from "@/global/errorHandlers/GenericErrorHandler.js";
 import type { ErrorHandlerBase } from "@/global/errorHandlers/ErrorHandlerBase.js";
+import { DateUtils } from "@/utils/date.js";
 
 export const registerErrorHandler = (server: FastifyInstance) => {
   const errorHandlers: ErrorHandlerBase[] = [
+    new RateLimitErrorHandler(),
     new ZodErrorHandler(),
     new PrismaErrorHandler(),
     new FastifyValidationErrorHandler(),
@@ -21,7 +24,7 @@ export const registerErrorHandler = (server: FastifyInstance) => {
         reply.code(500).send({
           statusCode: 500,
           message: "Internal server error",
-          timestamp: new Date().toISOString(),
+          timestamp: DateUtils.toUtcDate(DateUtils.now()),
         });
         return;
       }

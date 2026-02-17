@@ -438,12 +438,12 @@ MVP 0.4
 
 ### MVP 0.3
 
-- [ ] Redis store para idempotência
-- [ ] Geração de idempotencyKey
-- [ ] Cache de respostas
-- [ ] TTL de 24h
-- [ ] Rate limiting por cliente
-- [ ] Sliding window ou token bucket
+- [x] Redis store para idempotência
+- [x] Geração de idempotencyKey
+- [x] Cache de respostas
+- [x] TTL de <s>24h</s>
+- [x] Rate limiting por cliente
+- [ ] <s>Sliding window ou token bucket</s>
 
 ### MVP 0.4
 
