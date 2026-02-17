@@ -21,6 +21,15 @@ export const ROUTES = {
   },
 } as const;
 
-// Type for route paths
-export type RoutePath =
-  (typeof ROUTES)[keyof typeof ROUTES][keyof (typeof ROUTES)[keyof typeof ROUTES]];
+// Dynamically extract all route path values (strings) from the ROUTES object
+// This works recursively, so new routes are automatically included without type changes
+type ExtractPaths<T> =
+  T extends Record<string, infer U>
+    ? U extends string
+      ? U
+      : U extends Record<string, any>
+        ? ExtractPaths<U>
+        : never
+    : never;
+
+export type RoutePath = ExtractPaths<typeof ROUTES>;
