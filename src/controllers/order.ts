@@ -11,7 +11,7 @@ export const orderRouters = [
 
       const response = await new OrderProcessorService().execute(parsedBody);
 
-      return reply.code(201).send({
+      return reply.code(response.statusCode ?? 201).send({
         ...response,
         timestamp: new Date().toISOString(),
       });
