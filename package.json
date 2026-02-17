@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc && tsc-alias",
-    "start": "node dist/server.js",
+    "build": "rm -r ./dist && tsc && tsc-alias",
+    "start": "node dist/src/server.js",
     "db:up": "docker-compose up -d",
     "db:down": "docker-compose down",
     "db:migrate-dev": "prisma migrate dev",
