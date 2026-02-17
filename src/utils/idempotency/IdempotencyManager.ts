@@ -2,10 +2,11 @@ import {
   getRedisManagerInstance,
   type RedisManager,
 } from "@/libs/redis/RedisManager.js";
+import { DateUtils, type timestamp } from "@/utils/date.js";
 
 interface IdempotencyData<T> {
   data: T;
-  timestamp: number;
+  timestamp: timestamp;
 }
 
 class IdempotencyKeyManager {
@@ -33,7 +34,7 @@ class IdempotencyKeyManager {
     const key = this.getKey(idempotencyKey);
     const idemData: IdempotencyData<T> = {
       data: data,
-      timestamp: Date.now(),
+      timestamp: DateUtils.now(),
     };
 
     await redis.setEx(key, ttl, JSON.stringify(idemData));

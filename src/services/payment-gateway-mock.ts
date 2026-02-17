@@ -1,5 +1,6 @@
 import type { PaymentStatus } from "@/generated/prisma/enums.js";
 import { logger } from "@/libs/logger.js";
+import { DateUtils } from "@/utils/date.js";
 
 export interface CardData {
   number: string;
@@ -87,7 +88,7 @@ export default class PaymentGatewayMock {
    * Generates a mock payment ID (simulates gateway token)
    */
   private generatePaymentId(): string {
-    return `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `PAY_${DateUtils.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**

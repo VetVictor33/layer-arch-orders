@@ -2,6 +2,7 @@ import { AppError } from "@/global/errors/AppError.js";
 import { OrderSchema } from "@/global/schemas/orders.js";
 import OrderProcessorService from "@/services/order-processor.js";
 import GetOrderPaymentStatusService from "@/services/get-order-payment-status.js";
+import { DateUtils } from "@/utils/date.js";
 import type { FastifyInstance } from "fastify";
 
 export const orderRouters = [
@@ -13,7 +14,7 @@ export const orderRouters = [
 
       return reply.code(response.statusCode ?? 201).send({
         ...response,
-        timestamp: new Date().toISOString(),
+        timestamp: DateUtils.toUtcDate(DateUtils.now()),
       });
     });
   },
@@ -25,7 +26,7 @@ export const orderRouters = [
 
       return reply.code(200).send({
         ...response,
-        timestamp: new Date().toISOString(),
+        timestamp: DateUtils.toUtcDate(DateUtils.now()),
       });
     });
   },

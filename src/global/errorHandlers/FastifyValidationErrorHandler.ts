@@ -1,4 +1,5 @@
 import { ErrorHandlerBase, type ErrorResponse } from "./ErrorHandlerBase.js";
+import { DateUtils } from "@/utils/date.js";
 
 export class FastifyValidationErrorHandler extends ErrorHandlerBase {
   canHandle(error: Error): boolean {
@@ -9,7 +10,7 @@ export class FastifyValidationErrorHandler extends ErrorHandlerBase {
     return {
       statusCode: 400,
       message: "Request validation failed",
-      timestamp: new Date().toISOString(),
+      timestamp: DateUtils.toUtcDate(DateUtils.now()),
     };
   }
 }
