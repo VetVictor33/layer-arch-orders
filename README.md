@@ -21,16 +21,24 @@ src/
   ├── services/         # Business logic layer
   ├── repositories/     # Data access layer
   ├── workers/          # BullMQ job workers
-  ├── middleware/       # Request/response middleware
+  ├── middleware/       # Request/response middleware (error handling, rate limiting)
+  ├── global/
+  │   ├── errors/       # Custom error classes
+  │   ├── errorHandlers/  # Error handling strategies
+  │   └── schemas/      # Validation schemas (Zod)
+  ├── utils/
+  │   ├── rate-limiting/  # Rate limiting manager (Sliding Window)
+  │   ├── idempotency/    # Idempotency key manager
+  │   ├── redis/        # Redis connection manager
+  │   └── date.ts       # Centralized date utilities
+  ├── config/
+  │   ├── routes-paths.ts     # Centralized route constants
+  │   └── rate-limit-configs.ts # Rate limit configurations
   ├── libs/
   │   ├── bullmq.ts     # Queue manager singleton
   │   ├── bullboard.ts  # Queue dashboard setup
   │   ├── queues.ts     # Type-safe queue enums
   │   └── logger.ts     # Pino logger configuration
-  ├── global/
-  │   ├── errors/       # Custom error classes
-  │   ├── errorHandlers/  # Error handling strategies
-  │   └── schemas/      # Validation schemas (Zod)
   └── server.ts         # Fastify server setup
 prisma/
   ├── schema.prisma     # Database schema
@@ -113,6 +121,20 @@ pnpm start
 - **Mock Payment Gateway**: Full payment processing simulation with random delays (0-60s)
 - **Realistic Failures**: 50% failure rate for testing retry mechanisms
 
+### Idempotency & Request Deduplication
+
+- **Idempotency Keys**: Generate deterministic keys from request data
+- **Request Caching**: Store and replay responses for duplicate requests (TTL: 15 minutes)
+- **Automatic Detection**: Prevents duplicate order processing
+- **Redis-backed**: Efficient in-memory storage with custom timestamp type
+
+### Rate Limiting
+
+- **Global Rate Limiting**: 10 requests per 2 minutes per IP
+- **Smart Route Skipping**: Excludes Bull Board admin routes
+- **Standard HTTP Headers**: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After
+- **Detailed Error Responses**: ISO 8601 formatted timestamps and clear feedback
+
 ### Queue System (BullMQ + Redis)
 
 - **Asynchronous Processing**: Payment jobs processed in background queue
@@ -124,14 +146,17 @@ pnpm start
 
 - **Layered Design**: Controllers → Services → Repositories
 - **Type-Safe**: Full TypeScript with strict typing
-- **OOP Patterns**: Service classes, handler classes, worker registrars
+- **OOP Patterns**: Service classes, handler classes, worker registrars, manager classes
 - **Clean Separation**: Payment processing, DLQ handling, queue management isolated
+- **Centralized Configuration**: Route paths and rate limit configs in dedicated files
+- **Utility Classes**: DateUtils, RedisManager, RateLimitingManager, IdempotencyKeyManager
 
 ### Validation & Error Handling
 
 - **Zod Schemas**: Request validation for order and payment data
-- **Comprehensive Error Handling**: Custom error classes and handlers
+- **Comprehensive Error Handling**: Custom handlers for Zod, Prisma, Rate Limit, Validation, and Generic errors
 - **Structured Logging**: Pino JSON logs with context
+- **HTTP Status Codes**: Proper codes for all scenarios (429 for rate limit, 400 for validation, 409 for conflicts, etc.)
 
 ## API Endpoints
 
@@ -195,22 +220,48 @@ Response:
 ## Workflow
 
 1. **Client sends order** → POST `/order`
-2. **Order saved immediately** with PENDING status
-3. **Payment job enqueued** to Redis/BullMQ
-4. **Worker processes payment** asynchronously
-5. **Retry mechanism** (up to 3 attempts) if payment fails
-6. **Dead Letter Queue** for permanent failures
-7. **Order status updated** when payment completes
-8. **Monitor via Bull Board** at `/admin/queues`
+2. **Idempotency check** - Returns cached response if request was already processed
+3. **Order saved immediately** with PENDING status
+4. **Payment job enqueued** to Redis/BullMQ
+5. **Worker processes payment** asynchronously
+6. **Retry mechanism** (up to 3 attempts) if payment fails
+7. **Dead Letter Queue** for permanent failures
+8. **Order status updated** when payment completes
+9. **Monitor via Bull Board** at `/admin/queues`
+
+## Rate Limiting
+
+The API implements **Rate Limiting** to prevent abuse:
+
+- **Global limit**: 10 requests per 120 seconds per IP
+- **Skipped routes**: Admin UI (`/admin/queues`)
+- **Response headers**:
+  - `X-RateLimit-Limit`: Maximum requests allowed
+  - `X-RateLimit-Remaining`: Requests remaining
+  - `X-RateLimit-Reset`: Unix timestamp when limit resets
+  - `Retry-After`: ISO 8601 timestamp when safe to retry (on 429 responses)
+
+Example 429 response:
+
+```json
+{
+  "statusCode": 429,
+  "message": "Too many requests",
+  "remaining": 0,
+  "resetAt": "2026-02-17T14:35:30.000Z",
+  "retryAfter": "2026-02-17T14:35:30.000Z",
+  "timestamp": "2026-02-17T14:33:30.000Z"
+}
+```
 
 ## Project Status
 
 **MVP 0.1** - Core payment processing implemented
 
-**MVP 0.2** - Asynchronous payment processing
+**MVP 0.2** - Asynchronous payment processing with BullMQ
 
-**MVP 0.3** (Idempotency) - Next
+**MVP 0.3** (Idempotency + Rate Limiting)
 
-**MVP 0.4** (Email notifications) - Future
+**MVP 0.4** (Email notifications) - Next
 
 See [MVP Plan](./docs/mvp-plan.md) for detailed roadmap and architecture
