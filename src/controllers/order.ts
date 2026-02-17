@@ -3,11 +3,12 @@ import { OrderSchema } from "@/global/schemas/orders.js";
 import OrderProcessorService from "@/services/order-processor.js";
 import GetOrderPaymentStatusService from "@/services/get-order-payment-status.js";
 import { DateUtils } from "@/utils/date.js";
+import { ROUTES } from "@/config/routes-paths.js";
 import type { FastifyInstance } from "fastify";
 
 export const orderRouters = [
   async (server: FastifyInstance) => {
-    server.post("/order", async (request, reply) => {
+    server.post(ROUTES.ORDER.CREATE, async (request, reply) => {
       const parsedBody = OrderSchema.parse(request.body);
 
       const response = await new OrderProcessorService().execute(parsedBody);
@@ -19,7 +20,7 @@ export const orderRouters = [
     });
   },
   async (server: FastifyInstance) => {
-    server.get("/order/:id/payment-status", async (request, reply) => {
+    server.get(ROUTES.ORDER.GET_PAYMENT_STATUS, async (request, reply) => {
       const { id } = request.params as { id: string };
 
       const response = await new GetOrderPaymentStatusService().execute(id);
