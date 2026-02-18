@@ -16,4 +16,4 @@ export const LOGGER_CONFIG = {
   },
 };
 
-export const logger = pino(LOGGER_CONFIG);
+export const LOGGER = pino(LOGGER_CONFIG);

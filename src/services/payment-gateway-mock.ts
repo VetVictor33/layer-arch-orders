@@ -1,5 +1,5 @@
 import type { PaymentStatus } from "@/generated/prisma/enums.js";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
 import { DateUtils } from "@/utils/date.js";
 
 export interface CardData {
@@ -41,7 +41,7 @@ export default class PaymentGatewayMock {
     // Chance to randomly throw error for testing queue retries
     const shouldFail = Math.random() < 0.5;
 
-    logger.info(
+    LOGGER.info(
       `Job for order ${request.orderId} will ${shouldFail ? "" : "not"} fail after ${randomDelay / 1000}s`,
     );
 

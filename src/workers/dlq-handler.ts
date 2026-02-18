@@ -1,6 +1,6 @@
 import QueueManager from "@/libs/bullmq.js";
 import { QueueName } from "@/libs/queues.js";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
 
 export interface JobFailureContext {
   jobId: string;
@@ -50,7 +50,7 @@ export class DLQHandler {
         context.error,
       );
 
-      logger.warn(
+      LOGGER.warn(
         {
           jobId: context.jobId,
           orderId: context.orderId,
@@ -60,7 +60,7 @@ export class DLQHandler {
         "Job moved to Dead Letter Queue - requires manual intervention",
       );
     } catch (dlqError) {
-      logger.error(
+      LOGGER.error(
         { jobId: context.jobId, orderId: context.orderId, dlqError },
         "Failed to move job to DLQ",
       );

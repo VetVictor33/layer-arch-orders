@@ -1,7 +1,7 @@
 import type { Job } from "bullmq";
 import QueueManager from "@/libs/bullmq.js";
 import { QueueName } from "@/libs/queues.js";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
 import {
   PaymentProcessorService,
   type PaymentProcessorResult,
@@ -61,7 +61,7 @@ class PaymentWorkerRegistrar {
     const movedToDLQ = await this.dlqHandler.handleJobFailure(context);
 
     if (movedToDLQ) {
-      logger.error(
+      LOGGER.error(
         {
           orderId: job.data.orderId,
           jobId: job.id,
@@ -93,7 +93,7 @@ class DLQWorkerRegistrar {
   }
 
   private async handleDLQJob(job: Job<PaymentRequest, void>): Promise<void> {
-    logger.warn(
+    LOGGER.warn(
       {
         orderId: job.data.orderId,
         jobId: job.id,

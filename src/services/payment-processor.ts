@@ -5,7 +5,7 @@ import type {
 } from "@/services/payment-gateway-mock.js";
 import PaymentGatewayMock from "@/services/payment-gateway-mock.js";
 import { OrderRepository } from "@/repositories/OrderRepository.js";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
 
 export interface PaymentProcessorResult {
   success: boolean;
@@ -40,7 +40,7 @@ export class PaymentProcessorService {
       gatewayId: payment.gatewayId,
     });
 
-    logger.info(
+    LOGGER.info(
       { orderId: order.id, paymentId: payment.paymentId },
       "Payment processed successfully",
     );
