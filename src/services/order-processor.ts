@@ -8,6 +8,8 @@ import { orderCreationIdempotencyKeyGenerator } from "@/utils/idempotency/idempo
 import { getIdempotencyKeyManagerInstance } from "@/utils/idempotency/IdempotencyManager.js";
 import type { Order, PaymentStatus } from "@/generated/prisma/client.js";
 import { AppError } from "@/global/errors/AppError.js";
+import type { EmailJobData } from "@/workers/email.worker.js";
+import { EmailTemplateGenerator } from "@/utils/email-templates.js";
 
 type IdempotencyStoreData = {
   orderId: string;
@@ -48,6 +50,7 @@ export default class OrderProcessorService extends Service {
 
     const queueManager = QueueManager.getInstance();
 
+    // Queue payment processing
     // TO-DO: critical -> this saves sensitive data to our DB (card data).
     // Implement card tokenization to avoid it
     await queueManager.addJob<PaymentRequest>("payment-processing", {
@@ -59,6 +62,21 @@ export default class OrderProcessorService extends Service {
     });
 
     LOGGER.info(`Payment for order ${order.id} queued.`);
+
+    // Queue order created email notification
+    const emailTemplate = EmailTemplateGenerator.generateOrderCreatedTemplate(
+      input.customer.name,
+      order.id,
+      input.product.id,
+      input.product.price,
+    );
+
+    await queueManager.addJob<EmailJobData>("email-notifications", {
+      customerEmail: input.customer.email,
+      template: emailTemplate,
+    });
+
+    LOGGER.info(`Order created email for order ${order.id} queued.`);
 
     return this.buildResponde({ order });
   }
