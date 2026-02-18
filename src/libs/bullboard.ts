@@ -2,7 +2,7 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { FastifyAdapter } from "@bull-board/fastify";
 import type { FastifyInstance } from "fastify";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
 import QueueManager from "@/libs/bullmq.js";
 import { QueueName } from "@/libs/queues.js";
 import { getEnv } from "@/env.js";
@@ -67,7 +67,7 @@ class BullBoardManager {
       },
     });
 
-    logger.info("Bull Board initialized successfully");
+    LOGGER.info("Bull Board initialized successfully");
   }
 
   /**
@@ -78,7 +78,7 @@ class BullBoardManager {
       prefix: ROUTES.BULLBOARD.BASE,
     });
 
-    logger.info(
+    LOGGER.info(
       `Bull Board routes registered at ${ROUTES.BULLBOARD.BASE} - Access UI at http://localhost:${getEnv().PORT}${ROUTES.BULLBOARD.BASE}`,
     );
   }

@@ -3,11 +3,13 @@ import Service from "@/services/service.js";
 import type { OrderInput } from "@/global/schemas/orders.js";
 import { type PaymentRequest } from "@/services/payment-gateway-mock.js";
 import QueueManager from "@/libs/bullmq.js";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
 import { orderCreationIdempotencyKeyGenerator } from "@/utils/idempotency/idempotency-generator.js";
 import { getIdempotencyKeyManagerInstance } from "@/utils/idempotency/IdempotencyManager.js";
 import type { Order, PaymentStatus } from "@/generated/prisma/client.js";
 import { AppError } from "@/global/errors/AppError.js";
+import type { EmailJobData } from "@/workers/email.worker.js";
+import { EmailTemplateGenerator } from "@/utils/email-templates.js";
 
 type IdempotencyStoreData = {
   orderId: string;
@@ -26,7 +28,6 @@ export default class OrderProcessorService extends Service {
   private idemKey?: string;
 
   public async execute(input: OrderInput): Promise<ProcessorResponse> {
-    // Check idempotency
     this.input = input;
     const idemResponse = await this.handleIdempotency();
 
@@ -34,7 +35,6 @@ export default class OrderProcessorService extends Service {
       return idemResponse;
     }
 
-    // ----------
     const repo = new OrderRepository();
 
     const order = await repo.create({
@@ -50,6 +50,7 @@ export default class OrderProcessorService extends Service {
 
     const queueManager = QueueManager.getInstance();
 
+    // Queue payment processing
     // TO-DO: critical -> this saves sensitive data to our DB (card data).
     // Implement card tokenization to avoid it
     await queueManager.addJob<PaymentRequest>("payment-processing", {
@@ -60,14 +61,29 @@ export default class OrderProcessorService extends Service {
       card: input.payment.card,
     });
 
-    logger.info(`Payment for order ${order.id} queued.`);
+    LOGGER.info(`Payment for order ${order.id} queued.`);
+
+    // Queue order created email notification
+    const emailTemplate = EmailTemplateGenerator.generateOrderCreatedTemplate(
+      input.customer.name,
+      order.id,
+      input.product.id,
+      input.product.price,
+    );
+
+    await queueManager.addJob<EmailJobData>("email-notifications", {
+      customerEmail: input.customer.email,
+      template: emailTemplate,
+    });
+
+    LOGGER.info(`Order created email for order ${order.id} queued.`);
 
     return this.buildResponde({ order });
   }
 
   private async handleIdempotency() {
     if (!this.input) {
-      logger.fatal("Unexpected lack of input on OrderProcessorService");
+      LOGGER.fatal("Unexpected lack of input on OrderProcessorService");
       throw new AppError(500, "Internal error");
     }
 
@@ -84,7 +100,7 @@ export default class OrderProcessorService extends Service {
       await idemManager.retrieve<IdempotencyStoreData>(idemKey);
 
     if (storedRequest) {
-      logger.info(`Idempotency hit for order ${storedRequest.data.orderId}`);
+      LOGGER.info(`Idempotency hit for order ${storedRequest.data.orderId}`);
       return this.buildResponde({
         order: {
           id: storedRequest.data.orderId,
@@ -100,7 +116,7 @@ export default class OrderProcessorService extends Service {
 
   private async storeResponseFormIdempotency(order: Order) {
     if (!this.idemKey) {
-      logger.fatal("Unexpected lack of idemKey on OrderProcessorService");
+      LOGGER.fatal("Unexpected lack of idemKey on OrderProcessorService");
       throw new AppError(500, "Internal server error");
     }
     const idemManager = await getIdempotencyKeyManagerInstance();

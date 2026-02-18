@@ -7,7 +7,7 @@ import {
   type JobsOptions,
 } from "bullmq";
 import { getEnv } from "@/env.js";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
 import type { QueueNameType } from "@/libs/queues.js";
 
 interface RedisConfig {
@@ -48,7 +48,7 @@ export default class QueueManager {
       jitter: 0.5,
     };
 
-    logger.info(
+    LOGGER.info(
       { host: config.host, port: config.port },
       "QueueManager initialized",
     );
@@ -106,11 +106,11 @@ export default class QueueManager {
     });
 
     worker.on("completed", (job) => {
-      logger.info({ jobId: job.id, queueName }, "Job completed");
+      LOGGER.info({ jobId: job.id, queueName }, "Job completed");
     });
 
     worker.on("failed", (job, err) => {
-      logger.error(
+      LOGGER.error(
         {
           jobId: job?.id,
           queueName,
@@ -122,7 +122,7 @@ export default class QueueManager {
 
       // Move to DLQ after max attempts
       if (job && job.attemptsMade >= this.defaultMaxAttempts) {
-        logger.warn(
+        LOGGER.warn(
           {
             jobId: job.id,
             queueName,
@@ -217,7 +217,7 @@ export default class QueueManager {
 
     const job = await sourceQueue.getJob(jobId);
     if (!job) {
-      logger.warn(
+      LOGGER.warn(
         { jobId, sourceQueue: sourceQueueName },
         "Job not found for DLQ transfer",
       );
@@ -232,7 +232,7 @@ export default class QueueManager {
       attempts: 1,
     });
 
-    logger.info(
+    LOGGER.info(
       {
         jobId,
         sourceQueue: sourceQueueName,
@@ -274,6 +274,6 @@ export default class QueueManager {
       await queue.close();
     }
 
-    logger.info("QueueManager disconnected");
+    LOGGER.info("QueueManager disconnected");
   }
 }

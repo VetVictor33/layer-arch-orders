@@ -5,7 +5,10 @@ import type {
 } from "@/services/payment-gateway-mock.js";
 import PaymentGatewayMock from "@/services/payment-gateway-mock.js";
 import { OrderRepository } from "@/repositories/OrderRepository.js";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
+import QueueManager from "@/libs/bullmq.js";
+import type { EmailJobData } from "@/workers/email.worker.js";
+import { EmailTemplateGenerator } from "@/utils/email-templates.js";
 
 export interface PaymentProcessorResult {
   success: boolean;
@@ -40,11 +43,56 @@ export class PaymentProcessorService {
       gatewayId: payment.gatewayId,
     });
 
-    logger.info(
+    LOGGER.info(
       { orderId: order.id, paymentId: payment.paymentId },
       "Payment processed successfully",
     );
 
+    await this.queueNotificationEmail(order, paymentRequest, payment);
+
     return { success: true, payment };
+  }
+
+  private async queueNotificationEmail(
+    order: { id: string },
+    paymentRequest: PaymentRequest,
+    payment: PaymentResponse,
+  ): Promise<void> {
+    const queueManager = QueueManager.getInstance();
+
+    let template:
+      | ReturnType<typeof EmailTemplateGenerator.generateOrderPaidTemplate>
+      | ReturnType<typeof EmailTemplateGenerator.generatePaymentDeniedTemplate>;
+    let logMessage: string;
+
+    if (payment.status === "PAID") {
+      template = EmailTemplateGenerator.generateOrderPaidTemplate(
+        paymentRequest.customerName,
+        order.id,
+        payment.paymentId,
+        paymentRequest.amount,
+      );
+      logMessage = "Order paid email queued";
+    } else if (payment.status === "DENIED") {
+      template = EmailTemplateGenerator.generatePaymentDeniedTemplate(
+        paymentRequest.customerName,
+        order.id,
+        paymentRequest.amount,
+        payment.denialReason || "Payment declined",
+      );
+      logMessage = "Payment denied email queued";
+    } else {
+      LOGGER.warn(
+        `No email for order ${order.id} on status ${payment.status}.`,
+      );
+      return; // No email for other statuses
+    }
+
+    await queueManager.addJob<EmailJobData>("email-notifications", {
+      customerEmail: paymentRequest.customerEmail,
+      template,
+    });
+
+    LOGGER.info({ orderId: order.id }, logMessage);
   }
 }

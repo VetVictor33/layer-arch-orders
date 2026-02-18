@@ -1,6 +1,8 @@
 import type { PaymentStatus } from "@/generated/prisma/enums.js";
-import { logger } from "@/libs/logger.js";
+import { LOGGER } from "@/libs/logger.js";
 import { DateUtils } from "@/utils/date.js";
+import type { IEmailProvider } from "@/services/email.js";
+import { ConsoleEmailProvider } from "@/libs/__mocks__/email-provider.js";
 
 export interface CardData {
   number: string;
@@ -22,6 +24,7 @@ export interface PaymentResponse {
   gatewayId: string;
   status: PaymentStatus;
   message: string;
+  denialReason?: string;
 }
 
 export default class PaymentGatewayMock {
@@ -41,7 +44,7 @@ export default class PaymentGatewayMock {
     // Chance to randomly throw error for testing queue retries
     const shouldFail = Math.random() < 0.5;
 
-    logger.info(
+    LOGGER.info(
       `Job for order ${request.orderId} will ${shouldFail ? "" : "not"} fail after ${randomDelay / 1000}s`,
     );
 
@@ -80,6 +83,7 @@ export default class PaymentGatewayMock {
         gatewayId: this.gatewayId,
         status: "DENIED",
         message: `Payment denied for order ${request.orderId}`,
+        denialReason: "Card declined",
       };
     }
   }

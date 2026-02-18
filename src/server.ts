@@ -3,6 +3,7 @@ import { getEnv } from "@/env.js";
 import { registerRoutes } from "@/routes.js";
 import { registerErrorHandler } from "@/middleware/errorHandler.js";
 import { registerPaymentWorker } from "@/workers/payment-processor.worker.js";
+import { registerEmailWorker } from "@/workers/email.worker.js";
 import { bullBoardManager } from "@/libs/bullboard.js";
 import { LOGGER_CONFIG } from "@/libs/logger.js";
 import { registerRateLimitMiddleware } from "@/middleware/rateLimit.js";
@@ -23,6 +24,7 @@ registerRateLimitMiddleware(server, {
 
 registerErrorHandler(server);
 registerPaymentWorker();
+registerEmailWorker();
 
 // Initialize Bull Board BEFORE registering routes
 if (env.NODE_ENV == "development") {

@@ -447,8 +447,8 @@ MVP 0.4
 
 ### MVP 0.4
 
-- [ ] Resend API setup
-- [ ] Template de emails
-- [ ] BullMQ queue de emails
-- [ ] Worker de email
-- [ ] Eventos de email
+- [x] <s>Resend</s> e-mail service setup
+- [x] Template de emails
+- [x] BullMQ queue de emails
+- [x] Worker de email
+- [ ] <s>Eventos de email</s>
