@@ -30,6 +30,7 @@
   "devDependencies": {
     "@bull-board/api": "^6.18.2",
     "@types/jest": "^30.0.0",
+    "@types/k6": "^1.6.0",
     "@types/node": "^25.2.3",
     "@types/pg": "^8.16.0",
     "jest": "^30.2.0",
