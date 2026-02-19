@@ -2,7 +2,15 @@ import { getEnv } from "@/env.js";
 import { PrismaClient } from "@/generated/prisma/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-export abstract class RepositoryBase<T> {
+export interface IRepository<T> {
+  create(data: Partial<T>): Promise<T>;
+  update(id: string, data: Partial<T>): Promise<T>;
+  findById(id: string): Promise<T | null>;
+  delete(id: string): Promise<void>;
+  disconnect(): Promise<void>;
+}
+
+export abstract class Repository<T> implements IRepository<T> {
   protected prisma: PrismaClient;
 
   constructor() {

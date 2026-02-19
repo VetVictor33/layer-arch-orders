@@ -9,10 +9,12 @@ interface IdempotencyData<T> {
   timestamp: timestamp;
 }
 
-class IdempotencyKeyManager {
+export class IdempotencyKeyManager {
   private redisManager: RedisManager | null = null;
   private readonly KEY_PREFIX = "idempotency:";
   private readonly DEFAULT_TTL = 900; // 15 minutes || 86400; // 24 hours
+
+  private static instance: IdempotencyKeyManager | undefined;
 
   private async getRedisManager(): Promise<RedisManager> {
     if (!this.redisManager) {
@@ -72,13 +74,14 @@ class IdempotencyKeyManager {
     const keys = await redis.keys(pattern);
     await redis.del(keys);
   }
-}
 
-let instance: IdempotencyKeyManager | undefined;
-
-export async function getIdempotencyKeyManagerInstance(): Promise<IdempotencyKeyManager> {
-  if (!instance) {
-    instance = new IdempotencyKeyManager();
+  /**
+   * Get singleton instance of IdempotencyKeyManager
+   */
+  static getInstance(): IdempotencyKeyManager {
+    if (!IdempotencyKeyManager.instance) {
+      IdempotencyKeyManager.instance = new IdempotencyKeyManager();
+    }
+    return IdempotencyKeyManager.instance;
   }
-  return instance;
 }

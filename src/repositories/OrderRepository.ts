@@ -1,5 +1,5 @@
 import { AppError } from "@/global/errors/AppError.js";
-import { RepositoryBase } from "./RepositoryBase.js";
+import { Repository } from "./RepositoryBase.js";
 import type {
   Order,
   PaymentStatus,
@@ -23,7 +23,7 @@ export interface UpdateOrderDTO {
   paymentStatus?: PaymentStatus;
 }
 
-export class OrderRepository extends RepositoryBase<Order> {
+export class OrderRepository extends Repository<Order> {
   async create(data: CreateOrderDTO): Promise<Order> {
     return this.prisma.order.create({
       data,

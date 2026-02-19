@@ -1,43 +1,23 @@
-import type { PaymentStatus } from "@/generated/prisma/enums.js";
 import { LOGGER } from "@/libs/logger.js";
+import type {
+  IPaymentGateway,
+  PaymentRequest,
+  PaymentResponse,
+} from "@/services/payment-processor.js";
 import { DateUtils } from "@/utils/date.js";
-import type { IEmailProvider } from "@/services/email.js";
-import { ConsoleEmailProvider } from "@/libs/__mocks__/email-provider.js";
 
-export interface CardData {
-  number: string;
-  holderName: string;
-  cvv: string;
-  expirationDate: string;
-}
-
-export interface PaymentRequest {
-  orderId: string;
-  amount: number;
-  customerEmail: string;
-  customerName: string;
-  card: CardData;
-}
-
-export interface PaymentResponse {
-  paymentId: string;
-  gatewayId: string;
-  status: PaymentStatus;
-  message: string;
-  denialReason?: string;
-}
-
-export default class PaymentGatewayMock {
+/**
+ * Mock Payment Gateway Implementation
+ * Simulates payment processing for development/testing
+ * Deterministic logic:
+ * - Odd price -> PAID
+ * - Even price -> DENIED
+ * - Zero or negative -> DENIED
+ * - 50% chance to randomly throw error for retry testing
+ */
+export class PaymentGatewayMock implements IPaymentGateway {
   private gatewayId = "MOCK_GATEWAY_001";
 
-  /**
-   * Simulates a payment processing request
-   * Deterministic logic:
-   * - Odd price -> PAID
-   * - Even price -> DENIED
-   * - Zero or negative -> ERROR
-   * - 50% chance to randomly throw error for retry testing
-   */
   async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
     // Simulate processing delay (random between 1-60 seconds)
     const randomDelay = Math.random() * 60000;

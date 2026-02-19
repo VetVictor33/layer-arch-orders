@@ -8,7 +8,7 @@ import type {
   OrderPaidTemplate,
   PaymentDeniedTemplate,
 } from "@/utils/email-templates.js";
-import { ConsoleEmailProvider } from "@/libs/__mocks__/email-provider.js";
+import { createEmailService } from "@/factories/EmailServiceFactory.js";
 
 /**
  * Email job data types
@@ -28,7 +28,7 @@ class EmailWorkerRegistrar {
 
   constructor() {
     this.queueManager = QueueManager.getInstance();
-    this.emailService = new EmailService(new ConsoleEmailProvider());
+    this.emailService = createEmailService();
   }
 
   register(): void {
