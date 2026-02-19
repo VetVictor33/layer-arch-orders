@@ -19,16 +19,24 @@ export class PaymentGatewayMock implements IPaymentGateway {
   private gatewayId = "MOCK_GATEWAY_001";
 
   async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
-    // Simulate processing delay (random between 1-60 seconds)
-    const randomDelay = Math.random() * 60000;
+    // Simulate processing delay (random between 1-30 seconds)
+    const randomDelay = Math.random() * 30000;
+    // 30% of change of no delay
+    const noDelay = Math.random() > 0.3;
     // Chance to randomly throw error for testing queue retries
-    const shouldFail = Math.random() < 0.5;
+    const shouldFail = Math.random() < 0.2;
 
-    LOGGER.info(
-      `Job for order ${request.orderId} will ${shouldFail ? "" : "not"} fail after ${randomDelay / 1000}s`,
-    );
+    if (noDelay) {
+      LOGGER.info(
+        `Job for order ${request.orderId} will ${shouldFail ? "" : "not"} fail immediately`,
+      );
+    } else {
+      LOGGER.info(
+        `Job for order ${request.orderId} will ${shouldFail ? "" : "not"} fail after ${randomDelay / 1000}s`,
+      );
+    }
 
-    await this.delay(randomDelay);
+    await this.delay(noDelay ? 0 : randomDelay);
 
     if (shouldFail) {
       throw new Error(
