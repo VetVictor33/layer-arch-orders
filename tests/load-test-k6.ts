@@ -1,6 +1,21 @@
 import http from "k6/http";
 import { check, group, sleep } from "k6";
 import { Rate, Trend, Counter } from "k6/metrics";
+import {
+  productIds,
+  cardNumbers,
+  firstNames,
+  lastNames,
+  MAX_IP_SUFFIX,
+  ipPatterns,
+  getRandomElement,
+  getRandomIP,
+  getRandomName,
+  getEmail,
+  recentRequests,
+  maxRecentRequests,
+  OrderPayload,
+} from "./utils.ts";
 
 // Custom metrics
 const successCount = new Counter("success_count");
@@ -17,68 +32,7 @@ const successRate = new Rate("success_rate");
 const idempotencyHitRate = new Rate("idempotency_hit_rate");
 const rateLimitedRate = new Rate("rate_limited_rate");
 
-// Test data
-const productIds = ["PROD-001", "PROD-002", "PROD-003", "PROD-004", "PROD-005"];
-const firstNames = ["John", "Jane", "Bob", "Alice", "Charlie", "Diana"];
-const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia"];
-const cardNumbers = [
-  "4111111111111111",
-  "5555555555554444",
-  "378282246310005",
-  "6011111111111117",
-];
-
-// IP addresses for rotation (bypass IP-based rate limiting)
-const MAX_IP_SUFFIX = 3; // Maximum number to replace X with
-const ipAddresses = ["192.168.1.X", "10.0.0.X", "172.16.0.X", "203.0.113.X"];
-
-// Store recent requests for idempotency testing
-interface RecentRequest {
-  name: string;
-  productId: string;
-  price: number;
-}
-
-const recentRequests: RecentRequest[] = [];
-const maxRecentRequests = 20;
-
-function getRandomElement<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function getRandomIP(): string {
-  const ipPattern = getRandomElement(ipAddresses);
-  const randomSuffix = Math.ceil(Math.random() * MAX_IP_SUFFIX);
-  return ipPattern.replace("X", randomSuffix.toString());
-}
-
-function getRandomName(): string {
-  return `${getRandomElement(firstNames)} ${getRandomElement(lastNames)}`;
-}
-
-function getEmail(name: string): string {
-  return `${name.replace(/\s/g, "")}@example.com`;
-}
-
-interface OrderPayload {
-  product: {
-    id: string;
-    price: number;
-  };
-  customer: {
-    name: string;
-    email: string;
-  };
-  payment: {
-    type: string;
-    card: {
-      number: string;
-      holderName: string;
-      cvv: string;
-      expirationDate: string;
-    };
-  };
-}
+// Test data and helpers imported from ./utils.ts
 
 function generateOrderPayload(useRecent = false): OrderPayload {
   let name: string;

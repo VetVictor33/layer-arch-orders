@@ -1,4 +1,15 @@
 import http from "http";
+import {
+  productIds,
+  cardNumbers,
+  getRandomElement,
+  getRandomIP,
+  getRandomName,
+  getEmail,
+  recentRequests,
+  maxRecentRequests,
+  type Request,
+} from "./utils.ts";
 
 // Configuration from environment or defaults
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3333;
@@ -9,32 +20,7 @@ const TARGET_RPS = parseInt(process.env.TARGET_RPS || "100"); // Much more reali
 const BATCH_INTERVAL = 100; // ms between batches
 const REQUEST_TIMEOUT = parseInt(process.env.REQUEST_TIMEOUT || "10000"); // 10 second timeout (realistic for loaded server)
 
-// Test data generators
-const productIds: string[] = [
-  "PROD-001",
-  "PROD-002",
-  "PROD-003",
-  "PROD-004",
-  "PROD-005",
-];
-const cardNumbers: string[] = [
-  "4111111111111111", // Visa
-  "5555555555554444", // Mastercard
-  "378282246310005", // Amex
-  "6011111111111117", // Discover
-];
-
-// Fake IP addresses for rotation (to bypass IP-based rate limiting)
-const ipAddresses: string[] = [
-  "192.168.1.1",
-  "192.168.1.2",
-  "192.168.1.3",
-  "192.168.1.4",
-  "10.0.0.1",
-  "10.0.0.2",
-  "172.16.0.1",
-  "172.16.0.2",
-];
+// IP rotation is handled by `getRandomIP()` from tests/utils
 
 // Generate unique load test identifiers
 const loadTestIds: string[] = Array.from(
@@ -51,16 +37,7 @@ let idempotencyHitCount = 0;
 const responseTimes: number[] = [];
 const statusCodeCounts: Record<number, number> = {};
 
-interface IdempotencyRequest {
-  name: string;
-  email: string;
-  productId: string;
-  price: number;
-  timestamp: number;
-}
-
-const recentRequests: IdempotencyRequest[] = []; // Store recent requests to trigger idempotency
-const maxRecentRequests = 20; // Keep last 20 requests for potential duplication
+// Reuse `recentRequests` and `maxRecentRequests` from tests/utils
 
 interface ErrorLog {
   timestamp: string;
@@ -87,43 +64,7 @@ const errorLogs: ErrorLog[] = [];
 const maxErrorLogsToKeep = 100; // Keep last 100 errors for memory efficiency
 
 // Helper functions
-function getRandomIP(): string {
-  return ipAddresses[Math.floor(Math.random() * ipAddresses.length)];
-}
-
-function getRandomProduct(): string {
-  return productIds[Math.floor(Math.random() * productIds.length)];
-}
-
-function getRandomCard(): string {
-  return cardNumbers[Math.floor(Math.random() * cardNumbers.length)];
-}
-
-function getEmail(name: string): string {
-  return `${name.replaceAll(" ", "")}@example.com`;
-}
-
-function getRandomName(): string {
-  const firstNames: string[] = [
-    "John",
-    "Jane",
-    "Bob",
-    "Alice",
-    "Charlie",
-    "Diana",
-  ];
-  const lastNames: string[] = [
-    "Smith",
-    "Johnson",
-    "Williams",
-    "Brown",
-    "Jones",
-    "Garcia",
-  ];
-  return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${
-    lastNames[Math.floor(Math.random() * lastNames.length)]
-  }`;
-}
+// getRandomIP, getRandomName, getEmail provided by tests/utils
 
 function getCurrentTimestamp(): string {
   const now = new Date();
@@ -184,7 +125,7 @@ function shouldTriggerIdempotency(): boolean {
   return Math.random() < 0.05 && recentRequests.length > 0;
 }
 
-function getIdempotencyRequestData(): IdempotencyRequest | null {
+function getIdempotencyRequestData(): Request | null {
   if (recentRequests.length === 0) return null;
   // Pick a random recent request
   return recentRequests[Math.floor(Math.random() * recentRequests.length)];
@@ -228,12 +169,12 @@ function makeRequest(): Promise<void> {
         price = idemData.price;
       } else {
         randomName = getRandomName();
-        productId = getRandomProduct();
+        productId = getRandomElement(productIds);
         price = Math.floor(Math.random() * 100 + 50);
       }
     } else {
       randomName = getRandomName();
-      productId = getRandomProduct();
+      productId = getRandomElement(productIds);
       price = Math.floor(Math.random() * 100 + 50);
     }
 
@@ -249,7 +190,7 @@ function makeRequest(): Promise<void> {
       payment: {
         type: "CARD",
         card: {
-          number: getRandomCard(),
+          number: getRandomElement(cardNumbers),
           holderName: getRandomName().toUpperCase(),
           cvv: String(Math.floor(Math.random() * 900) + 100),
           expirationDate: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(
@@ -346,7 +287,7 @@ function makeRequest(): Promise<void> {
       resolve();
     });
 
-    // Store request data for potential idempotency retests
+    // Store request data for potential idempotency retests (shared array)
     if (!isIdempotencyTest) {
       recentRequests.push({
         name: randomName,
