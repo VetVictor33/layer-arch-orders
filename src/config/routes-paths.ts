@@ -15,6 +15,10 @@ export const ROUTES = {
     GET_PAYMENT_STATUS: "/order/:id/payment-status",
   },
 
+  PAYMENT: {
+    CARD_TOKENIZATION: "/payment/card-token",
+  },
+
   // Bull Board routes (Queue monitoring dashboard)
   BULLBOARD: {
     BASE: "/admin/queues",
