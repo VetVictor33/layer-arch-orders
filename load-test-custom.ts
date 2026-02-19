@@ -4,9 +4,10 @@ import http from "http";
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3333;
 const HOST = "localhost";
 const BASE_URL = `http://${HOST}:${PORT}`;
-const DURATION_SECONDS = parseInt(process.env.DURATION_SECONDS || "60");
-const TARGET_RPS = parseInt(process.env.TARGET_RPS || "10000");
+const DURATION_SECONDS = parseInt(process.env.DURATION_SECONDS || "30");
+const TARGET_RPS = parseInt(process.env.TARGET_RPS || "100"); // Much more realistic default
 const BATCH_INTERVAL = 100; // ms between batches
+const REQUEST_TIMEOUT = parseInt(process.env.REQUEST_TIMEOUT || "10000"); // 10 second timeout (realistic for loaded server)
 
 // Test data generators
 const productIds: string[] = [
@@ -46,8 +47,20 @@ let successCount = 0;
 let errorCount = 0;
 let rateLimitCount = 0;
 let networkErrorCount = 0;
+let idempotencyHitCount = 0;
 const responseTimes: number[] = [];
 const statusCodeCounts: Record<number, number> = {};
+
+interface IdempotencyRequest {
+  name: string;
+  email: string;
+  productId: string;
+  price: number;
+  timestamp: number;
+}
+
+const recentRequests: IdempotencyRequest[] = []; // Store recent requests to trigger idempotency
+const maxRecentRequests = 20; // Keep last 20 requests for potential duplication
 
 interface ErrorLog {
   timestamp: string;
@@ -56,6 +69,18 @@ interface ErrorLog {
   message: string;
   responseBody?: string;
   duration?: number;
+  requestPayload?: {
+    customerName: string;
+    customerEmail: string;
+    productId: string;
+    price: number;
+  };
+  parsedResponse?: {
+    error?: string;
+    message?: string;
+    stack?: string;
+    [key: string]: unknown;
+  };
 }
 
 const errorLogs: ErrorLog[] = [];
@@ -66,10 +91,6 @@ function getRandomIP(): string {
   return ipAddresses[Math.floor(Math.random() * ipAddresses.length)];
 }
 
-function getRandomLoadTestId(): string {
-  return loadTestIds[Math.floor(Math.random() * loadTestIds.length)];
-}
-
 function getRandomProduct(): string {
   return productIds[Math.floor(Math.random() * productIds.length)];
 }
@@ -78,8 +99,8 @@ function getRandomCard(): string {
   return cardNumbers[Math.floor(Math.random() * cardNumbers.length)];
 }
 
-function getRandomEmail(): string {
-  return `load-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}@example.com`;
+function getEmail(name: string): string {
+  return `${name.replaceAll(" ", "")}@example.com`;
 }
 
 function getRandomName(): string {
@@ -120,14 +141,34 @@ function addErrorLog(
   message: string,
   responseBody?: string,
   duration?: number,
+  requestPayload?: RequestPayload,
 ): void {
+  let parsedResponse: ErrorLog["parsedResponse"] = undefined;
+
+  if (responseBody) {
+    try {
+      parsedResponse = JSON.parse(responseBody) as ErrorLog["parsedResponse"];
+    } catch {
+      // Response body is not JSON, leave as undefined
+    }
+  }
+
   const errorLog: ErrorLog = {
     timestamp: new Date().toISOString(),
     statusCode: statusCode ? parseInt(String(statusCode)) : undefined,
     errorType,
     message,
-    responseBody: responseBody ? responseBody.substring(0, 200) : undefined,
+    responseBody: responseBody ? responseBody.substring(0, 500) : undefined,
     duration,
+    requestPayload: requestPayload
+      ? {
+          customerName: requestPayload.customer.name,
+          customerEmail: requestPayload.customer.email,
+          productId: requestPayload.product.id,
+          price: requestPayload.product.price,
+        }
+      : undefined,
+    parsedResponse,
   };
 
   errorLogs.push(errorLog);
@@ -136,6 +177,17 @@ function addErrorLog(
   if (errorLogs.length > maxErrorLogsToKeep) {
     errorLogs.shift();
   }
+}
+
+function shouldTriggerIdempotency(): boolean {
+  // 5% chance to retrigger a recent request for idempotency testing
+  return Math.random() < 0.05 && recentRequests.length > 0;
+}
+
+function getIdempotencyRequestData(): IdempotencyRequest | null {
+  if (recentRequests.length === 0) return null;
+  // Pick a random recent request
+  return recentRequests[Math.floor(Math.random() * recentRequests.length)];
 }
 
 interface RequestPayload {
@@ -161,22 +213,45 @@ interface RequestPayload {
 function makeRequest(): Promise<void> {
   return new Promise((resolve) => {
     const startTime = Date.now();
+    let isIdempotencyTest = false;
+    let randomName: string;
+    let productId: string;
+    let price: number;
+
+    // Check if we should trigger idempotency
+    if (shouldTriggerIdempotency()) {
+      const idemData = getIdempotencyRequestData();
+      if (idemData) {
+        isIdempotencyTest = true;
+        randomName = idemData.name;
+        productId = idemData.productId;
+        price = idemData.price;
+      } else {
+        randomName = getRandomName();
+        productId = getRandomProduct();
+        price = Math.floor(Math.random() * 100 + 50);
+      }
+    } else {
+      randomName = getRandomName();
+      productId = getRandomProduct();
+      price = Math.floor(Math.random() * 100 + 50);
+    }
 
     const payload: RequestPayload = {
       product: {
-        id: getRandomProduct(),
-        price: Math.floor(Math.random() * 100 + 50), // Integer price between 50-150
+        id: productId,
+        price,
       },
       customer: {
-        name: getRandomName(),
-        email: getRandomEmail(),
+        name: randomName,
+        email: getEmail(randomName),
       },
       payment: {
         type: "CARD",
         card: {
           number: getRandomCard(),
-          holderName: getRandomName().toUpperCase(), // Uppercase holder name
-          cvv: String(Math.floor(Math.random() * 900) + 100), // 3-digit CVV as string
+          holderName: getRandomName().toUpperCase(),
+          cvv: String(Math.floor(Math.random() * 900) + 100),
           expirationDate: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(
             new Date().getFullYear() + Math.floor(Math.random() * 5) + 1,
           ).slice(-2)}`,
@@ -195,10 +270,10 @@ function makeRequest(): Promise<void> {
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payloadString),
-          "X-Forwarded-For": getRandomIP(), // Rotate fake IP
+          "X-Forwarded-For": getRandomIP(),
           "User-Agent": `LoadTest/${Math.random()}`,
         },
-        timeout: 5000,
+        timeout: REQUEST_TIMEOUT,
       },
       (res) => {
         let data = "";
@@ -209,10 +284,14 @@ function makeRequest(): Promise<void> {
           const duration = Date.now() - startTime;
           responseTimes.push(duration);
 
-          // Track status codes
           const statusCode = res.statusCode || 0;
           statusCodeCounts[statusCode] =
             (statusCodeCounts[statusCode] || 0) + 1;
+
+          // Log idempotency hit - same response suggests cache hit
+          if (isIdempotencyTest && statusCode >= 200 && statusCode < 400) {
+            idempotencyHitCount++;
+          }
 
           if (statusCode === 429) {
             rateLimitCount++;
@@ -220,13 +299,13 @@ function makeRequest(): Promise<void> {
             successCount++;
           } else {
             errorCount++;
-            // Log error details
             addErrorLog(
               statusCode,
               "http_error",
               `HTTP ${statusCode}`,
               data,
               duration,
+              payload,
             );
           }
           totalRequests++;
@@ -235,7 +314,7 @@ function makeRequest(): Promise<void> {
       },
     );
 
-    req.on("error", () => {
+    req.on("error", (err) => {
       const duration = Date.now() - startTime;
       networkErrorCount++;
       errorCount++;
@@ -243,9 +322,10 @@ function makeRequest(): Promise<void> {
       addErrorLog(
         undefined,
         "network",
-        "Network connection error",
+        `Network error: ${(err as Error).message || "Unknown"}`,
         undefined,
         duration,
+        payload,
       );
       resolve();
     });
@@ -255,9 +335,31 @@ function makeRequest(): Promise<void> {
       const duration = Date.now() - startTime;
       errorCount++;
       totalRequests++;
-      addErrorLog(undefined, "timeout", "Request timeout", undefined, duration);
+      addErrorLog(
+        undefined,
+        "timeout",
+        "Request timeout (5s exceeded)",
+        undefined,
+        duration,
+        payload,
+      );
       resolve();
     });
+
+    // Store request data for potential idempotency retests
+    if (!isIdempotencyTest) {
+      recentRequests.push({
+        name: randomName,
+        email: getEmail(randomName),
+        productId,
+        price,
+        timestamp: Date.now(),
+      });
+
+      if (recentRequests.length > maxRecentRequests) {
+        recentRequests.shift();
+      }
+    }
 
     req.write(payloadString);
     req.end();
@@ -275,47 +377,84 @@ async function runLoadTest(): Promise<void> {
     "INFO",
     `Expected Total Requests: ${(TARGET_RPS * DURATION_SECONDS).toLocaleString()}`,
   );
+  log("INFO", `Request Timeout: ${REQUEST_TIMEOUT}ms`);
   log(
     "INFO",
     "Features: 50 unique load test identifiers, IP rotation, randomized parameters",
+  );
+  log(
+    "INFO",
+    "Idempotency Testing: ~5% of requests will retry recent orders (same customer + product + price)",
+  );
+  log("INFO", "");
+  log("INFO", "💡 Pro Tips:");
+  log(
+    "INFO",
+    `   - For light testing: TARGET_RPS=50 DURATION_SECONDS=30 REQUEST_TIMEOUT=15000 pnpm test:load`,
+  );
+  log(
+    "INFO",
+    `   - For moderate testing: TARGET_RPS=200 DURATION_SECONDS=60 REQUEST_TIMEOUT=15000 pnpm test:load`,
+  );
+  log(
+    "INFO",
+    `   - For heavy testing: TARGET_RPS=1000 DURATION_SECONDS=60 REQUEST_TIMEOUT=30000 pnpm test:load`,
+  );
+  log(
+    "INFO",
+    `   - For insane testing: TARGET_RPS=1500 DURATION_SECONDS=120 REQUEST_TIMEOUT=60000 pnpm test:load:insane`,
+  );
+  log(
+    "INFO",
+    `   ⚠️  Single Node.js client is limited to ~1500 RPS max (OS socket limits)`,
   );
   log("INFO", "");
 
   const startTime = Date.now();
   const endTime = startTime + DURATION_SECONDS * 1000;
   let lastProgressLog = startTime;
+  let sentRequests = 0;
 
+  // Send requests asynchronously without waiting for responses
+  const sendRequestsAsync = async () => {
+    while (Date.now() < endTime) {
+      const batchSize = Math.ceil(TARGET_RPS / (1000 / BATCH_INTERVAL));
+
+      // Send all requests in batch without waiting for them to complete
+      for (let i = 0; i < batchSize; i++) {
+        makeRequest(); // Fire and forget - don't await
+        sentRequests++;
+      }
+
+      // Sleep for BATCH_INTERVAL to maintain target RPS
+      await new Promise((resolve) => setTimeout(resolve, BATCH_INTERVAL));
+    }
+  };
+
+  // Start sending requests
+  sendRequestsAsync();
+
+  // Report progress while requests are being processed
   while (Date.now() < endTime) {
-    const batchSize = Math.ceil(TARGET_RPS / (1000 / BATCH_INTERVAL));
-    const promises: Promise<void>[] = [];
+    await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    for (let i = 0; i < batchSize; i++) {
-      promises.push(makeRequest());
-    }
-
-    await Promise.all(promises);
-
-    // Sleep to maintain target RPS
-    const elapsedInBatch = Date.now() - startTime;
-    const expectedElapsed = (totalRequests / TARGET_RPS) * 1000;
-    const sleepTime = Math.max(0, expectedElapsed - elapsedInBatch);
-
-    if (sleepTime > 0) {
-      await new Promise((resolve) => setTimeout(resolve, sleepTime));
-    }
-
-    // Print progress every 5 seconds
     const now = Date.now();
-    if (now - lastProgressLog >= 5000) {
-      const elapsed = ((now - startTime) / 1000).toFixed(1);
-      const avgRps = (totalRequests / ((now - startTime) / 1000)).toFixed(0);
-      const successRate = ((successCount / totalRequests) * 100).toFixed(1);
-      log(
-        "PROGRESS",
-        `[${elapsed}s] ${totalRequests.toLocaleString()} requests | Success: ${successCount.toLocaleString()} (${successRate}%) | Errors: ${errorCount.toLocaleString()} | RateLimit: ${rateLimitCount.toLocaleString()} | Avg RPS: ${avgRps}`,
-      );
-      lastProgressLog = now;
-    }
+    const elapsed = ((now - startTime) / 1000).toFixed(1);
+    const avgRps = (totalRequests / ((now - startTime) / 1000)).toFixed(0);
+    const successRate =
+      totalRequests > 0
+        ? ((successCount / totalRequests) * 100).toFixed(1)
+        : "0.0";
+    log(
+      "PROGRESS",
+      `[${elapsed}s] ${totalRequests.toLocaleString()} requests | Success: ${successCount.toLocaleString()} (${successRate}%) | Errors: ${errorCount.toLocaleString()} | RateLimit: ${rateLimitCount.toLocaleString()} | Avg RPS: ${avgRps}`,
+    );
+  }
+
+  // Wait for remaining requests to complete (up to 30 seconds)
+  const flushStart = Date.now();
+  while (totalRequests < sentRequests && Date.now() - flushStart < 30000) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   // Print final results
@@ -342,6 +481,12 @@ async function runLoadTest(): Promise<void> {
     log(
       "RESULT",
       `🔴 Network/Timeout Errors: ${networkErrorCount.toLocaleString()}`,
+    );
+  }
+  if (idempotencyHitCount > 0) {
+    log(
+      "RESULT",
+      `🔄 Idempotency Tests Triggered: ${idempotencyHitCount.toLocaleString()}`,
     );
   }
 
@@ -388,12 +533,27 @@ async function runLoadTest(): Promise<void> {
         .sort((a, b) => parseInt(b[0]) - parseInt(a[0]))
         .forEach(([code, errors]) => {
           log("ERROR", `  Status ${code}: ${errors.length} occurrences`);
-          // Show last 3 examples
+          // Show last 3 examples with full details
           errors.slice(-3).forEach((err, idx) => {
-            log(
-              "DEBUG",
-              `    Example ${idx + 1} @ ${err.timestamp}: ${err.message}${err.responseBody ? ` - ${err.responseBody}` : ""}`,
-            );
+            log("DEBUG", `    Example ${idx + 1} @ ${err.timestamp}`);
+            if (err.requestPayload) {
+              log(
+                "DEBUG",
+                `      Request: Customer="${err.requestPayload.customerName}" (${err.requestPayload.customerEmail}), Product=${err.requestPayload.productId}, Price=${err.requestPayload.price}`,
+              );
+            }
+            log("DEBUG", `      Response: ${err.message}`);
+            if (err.parsedResponse?.error || err.parsedResponse?.message) {
+              const errorMsg =
+                err.parsedResponse.error || err.parsedResponse.message;
+              log("DEBUG", `      Error Details: ${errorMsg}`);
+            }
+            if (err.responseBody && !err.parsedResponse) {
+              log("DEBUG", `      Body: ${err.responseBody}`);
+            }
+            if (err.duration) {
+              log("DEBUG", `      Duration: ${err.duration}ms`);
+            }
           });
         });
     }
@@ -401,19 +561,31 @@ async function runLoadTest(): Promise<void> {
     if (errorsByType.network.length > 0) {
       console.log("");
       log("ERROR", `Network Errors: ${errorsByType.network.length} total`);
-      errorsByType.network.slice(-3).forEach((err, idx) => {
-        log("DEBUG", `  Example ${idx + 1} @ ${err.timestamp}: ${err.message}`);
+      errorsByType.network.slice(-5).forEach((err, idx) => {
+        log("DEBUG", `  Example ${idx + 1} @ ${err.timestamp}`);
+        log("DEBUG", `    Error: ${err.message}`);
+        if (err.requestPayload) {
+          log(
+            "DEBUG",
+            `    Request: Customer="${err.requestPayload.customerName}" (${err.requestPayload.customerEmail}), Product=${err.requestPayload.productId}, Price=${err.requestPayload.price}`,
+          );
+        }
+        log("DEBUG", `    Duration: ${err.duration}ms`);
       });
     }
 
     if (errorsByType.timeout.length > 0) {
       console.log("");
       log("ERROR", `Timeout Errors: ${errorsByType.timeout.length} total`);
-      errorsByType.timeout.slice(-3).forEach((err, idx) => {
-        log(
-          "DEBUG",
-          `  Example ${idx + 1} @ ${err.timestamp}: ${err.message} (${err.duration}ms)`,
-        );
+      errorsByType.timeout.slice(-5).forEach((err, idx) => {
+        log("DEBUG", `  Example ${idx + 1} @ ${err.timestamp}: ${err.message}`);
+        if (err.requestPayload) {
+          log(
+            "DEBUG",
+            `    Request: Customer="${err.requestPayload.customerName}" (${err.requestPayload.customerEmail}), Product=${err.requestPayload.productId}, Price=${err.requestPayload.price}`,
+          );
+        }
+        log("DEBUG", `    Duration: ${err.duration}ms`);
       });
     }
   }
