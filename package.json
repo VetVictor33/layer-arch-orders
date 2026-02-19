@@ -11,6 +11,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:load": "tsx load-test-custom.ts",
+    "test:load:light": "TARGET_RPS=100 DURATION_SECONDS=30 tsx load-test-custom.ts",
     "db:up": "docker-compose up -d",
     "db:down": "docker-compose down",
     "db:migrate-dev": "prisma migrate dev",
