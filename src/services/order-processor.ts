@@ -1,6 +1,5 @@
 import Service from "@/services/service.js";
 import type { OrderInput } from "@/global/schemas/orders.js";
-import { type PaymentRequest } from "@/services/payment-gateway-mock.js";
 import { LOGGER } from "@/libs/logger.js";
 import { orderCreationIdempotencyKeyGenerator } from "@/utils/idempotency/idempotency-generator.js";
 import type { Order, PaymentStatus } from "@/generated/prisma/client.js";
@@ -10,6 +9,7 @@ import { EmailTemplateGenerator } from "@/utils/email-templates.js";
 import type { IRepository } from "@/repositories/RepositoryBase.js";
 import type QueueManager from "@/libs/bullmq.js";
 import type { IdempotencyKeyManager } from "@/utils/idempotency/IdempotencyManager.js";
+import type { PaymentRequest } from "@/services/payment-processor.js";
 
 type IdempotencyStoreData = {
   orderId: string;

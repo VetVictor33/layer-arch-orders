@@ -5,9 +5,10 @@ import { LOGGER } from "@/libs/logger.js";
 import {
   PaymentProcessorService,
   type PaymentProcessorResult,
+  type PaymentRequest,
 } from "@/services/payment-processor.js";
 import { DLQHandler, type JobFailureContext } from "@/workers/dlq-handler.js";
-import type { PaymentRequest } from "@/services/payment-gateway-mock.js";
+import { createPaymentProcessorService } from "@/factories/PaymentProcessorFactory.js";
 
 /**
  * Registers the main payment processing worker
@@ -20,7 +21,7 @@ class PaymentWorkerRegistrar {
 
   constructor() {
     this.queueManager = QueueManager.getInstance();
-    this.paymentProcessor = new PaymentProcessorService();
+    this.paymentProcessor = createPaymentProcessorService();
     this.dlqHandler = new DLQHandler();
   }
 

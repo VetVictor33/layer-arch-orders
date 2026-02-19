@@ -1,15 +1,40 @@
-import type { Job } from "bullmq";
-import type {
-  PaymentRequest,
-  PaymentResponse,
-} from "@/services/payment-gateway-mock.js";
-import PaymentGatewayMock from "@/services/payment-gateway-mock.js";
-import { OrderRepository } from "@/repositories/OrderRepository.js";
 import { LOGGER } from "@/libs/logger.js";
 import QueueManager from "@/libs/bullmq.js";
 import type { EmailJobData } from "@/workers/email.worker.js";
 import { EmailTemplateGenerator } from "@/utils/email-templates.js";
+import type { PaymentStatus } from "@/generated/prisma/enums.js";
+import type { Repository } from "@/repositories/RepositoryBase.js";
+import type { Order } from "@/generated/prisma/client.js";
 
+export interface CardData {
+  number: string;
+  holderName: string;
+  cvv: string;
+  expirationDate: string;
+}
+
+export interface PaymentRequest {
+  orderId: string;
+  amount: number;
+  customerEmail: string;
+  customerName: string;
+  card: CardData;
+}
+
+export interface PaymentResponse {
+  paymentId: string;
+  gatewayId: string;
+  status: PaymentStatus;
+  message: string;
+  denialReason?: string;
+}
+
+/**
+ * Payment Gateway Interface - Contract for payment processing implementations
+ */
+export interface IPaymentGateway {
+  processPayment(request: PaymentRequest): Promise<PaymentResponse>;
+}
 export interface PaymentProcessorResult {
   success: boolean;
   payment: PaymentResponse;
@@ -20,13 +45,10 @@ export interface PaymentProcessorResult {
  * Handles both successful processing and error propagation
  */
 export class PaymentProcessorService {
-  private paymentGateway: PaymentGatewayMock;
-  private orderRepository: OrderRepository;
-
-  constructor() {
-    this.paymentGateway = new PaymentGatewayMock();
-    this.orderRepository = new OrderRepository();
-  }
+  constructor(
+    private paymentGateway: IPaymentGateway,
+    private orderRepository: Repository<Order>,
+  ) {}
 
   /**
    * Process a payment request
