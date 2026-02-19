@@ -3,14 +3,13 @@ import {
   type RedisManager,
 } from "@/libs/redis/RedisManager.js";
 import { DateUtils, type timestamp } from "@/utils/date.js";
-import type { IIdempotencyManager } from "@/utils/idempotency/IIdempotencyManager.js";
 
 interface IdempotencyData<T> {
   data: T;
   timestamp: timestamp;
 }
 
-export class IdempotencyKeyManager implements IIdempotencyManager {
+export class IdempotencyKeyManager {
   private redisManager: RedisManager | null = null;
   private readonly KEY_PREFIX = "idempotency:";
   private readonly DEFAULT_TTL = 900; // 15 minutes || 86400; // 24 hours
