@@ -21,6 +21,7 @@ const envSchema = z.object({
   REDIS_HOST: z.string().default("localhost"),
   REDIS_PORT: z.coerce.number().default(6379),
   REDIS_PASSWORD: z.string().default("local"),
+  JWT_SECRET: z.string(),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -32,7 +33,7 @@ const validateEnv = (): Env => {
 
   if (!parsed.success) {
     console.error("❌ Invalid environment variables:");
-    console.error(z.treeifyError(parsed.error));
+    console.error(z.treeifyError(parsed.error).properties);
     process.exit(1);
   }
 
