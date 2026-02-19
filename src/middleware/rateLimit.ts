@@ -14,7 +14,13 @@ interface RateLimitOptions {
 }
 
 const defaultIdentifier = (request: FastifyRequest): string => {
-  return request.ip || "unknown";
+  // Otherwise use X-Forwarded-For if available (for proxies), then fallback to IP
+  const forwardedFor = request.headers["x-forwarded-for"];
+  if (forwardedFor && typeof forwardedFor === "string") {
+    return forwardedFor.split(",")?.[0]?.trim() || request.ip || "unknown";
+  }
+
+  return "unknown";
 };
 
 const createRateLimitMiddleware = (options: RateLimitOptions) => {

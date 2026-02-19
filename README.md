@@ -12,6 +12,7 @@ A payment processing API with layered architecture, featuring deterministic paym
 - **Validation**: Zod
 - **Logging**: Pino
 - **Docker**: Docker Compose for local development
+- **Testing**: Jest + k6
 
 ## Project Structure
 
@@ -256,12 +257,23 @@ Example 429 response:
 
 ## Project Status
 
-**MVP 0.1** - Core payment processing implemented
-
-**MVP 0.2** - Asynchronous payment processing with BullMQ
-
-**MVP 0.3** (Idempotency + Rate Limiting)
-
-**MVP 0.4** (Email notifications) - Next
+**MVP 0.4** Completed
 
 See [MVP Plan](./docs/mvp-plan.md) for detailed roadmap and architecture
+
+## Tests
+
+This project includes unit and load tests. Below are quick references and commands to run them locally.
+
+- **Run unit tests:** `pnpm test` (uses `jest` / `ts-jest`)
+- **Watch mode:** `pnpm run test:watch`
+- **Run coverage:** `pnpm run test:coverage` — coverage artifacts are written to the `coverage/` folder and an HTML report is available at `coverage/lcov-report/index.html`.
+
+- **Load tests (custom harness):** `pnpm run test:load` (see `tests/load-test-custom.ts`)
+- **Load test presets:**
+  - Quick: `pnpm run test:load:quick`
+  - Moderate: `pnpm run test:load:moderate`
+  - Heavy: `pnpm run test:load:heavy`
+  - Insane: `pnpm run test:load:insane`
+
+- **k6 load tests:** `pnpm run test:k6` and specific presets like `pnpm run test:k6:quick`.
