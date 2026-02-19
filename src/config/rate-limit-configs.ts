@@ -6,8 +6,8 @@ import type { RateLimitConfig } from "@/utils/rate-limiting/RateLimitingManager.
 
 export const RATE_LIMIT_CONFIGS = {
   GLOBAL: {
-    windowSizeSeconds: 120,
-    maxRequests: 10,
+    windowSizeSeconds: 10,
+    maxRequests: 100,
   } as RateLimitConfig,
 
   SENSITIVE: {
