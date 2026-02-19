@@ -36,7 +36,7 @@ class PaymentWorkerRegistrar {
     job: Job<PaymentRequest, PaymentProcessorResult>,
   ): Promise<PaymentProcessorResult> {
     try {
-      return await this.paymentProcessor.processPayment(job.data);
+      return await this.paymentProcessor.execute(job.data);
     } catch (error) {
       await this.handlePaymentError(job, error);
       throw error;

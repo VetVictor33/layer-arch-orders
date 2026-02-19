@@ -5,6 +5,7 @@ import { EmailTemplateGenerator } from "@/utils/email-templates.js";
 import type { PaymentStatus } from "@/generated/prisma/enums.js";
 import type { Repository } from "@/repositories/RepositoryBase.js";
 import type { Order } from "@/generated/prisma/client.js";
+import Service from "@/services/service.js";
 
 export interface CardData {
   number: string;
@@ -44,17 +45,19 @@ export interface PaymentProcessorResult {
  * Service responsible for processing payments
  * Handles both successful processing and error propagation
  */
-export class PaymentProcessorService {
+export class PaymentProcessorService extends Service {
   constructor(
     private paymentGateway: IPaymentGateway,
     private orderRepository: Repository<Order>,
-  ) {}
+  ) {
+    super();
+  }
 
   /**
    * Process a payment request
    * Throws error if payment fails (triggers retry mechanism)
    */
-  async processPayment(
+  async execute(
     paymentRequest: PaymentRequest,
   ): Promise<PaymentProcessorResult> {
     const payment = await this.paymentGateway.processPayment(paymentRequest);
