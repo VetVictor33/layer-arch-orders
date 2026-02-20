@@ -2,7 +2,7 @@ import { AppError } from "@/global/errors/AppError.js";
 import { OrderSchema } from "@/global/schemas/orders.js";
 import { createOrderProcessorService } from "@/factories/order-processor-factory.js";
 import GetOrderPaymentStatusService from "@/services/order/get-order-payment-status.js";
-import { DateUtils } from "@/utils/date.js";
+import { DateUtils } from "@/global/utils/date.js";
 import { ROUTES } from "@/config/routes-paths.js";
 import type { FastifyInstance } from "fastify";
 

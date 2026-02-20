@@ -1,7 +1,7 @@
 import OrderProcessorService from "@/services/order/order-processor.js";
 import { OrderRepository } from "@/repositories/OrderRepository.js";
 import QueueManager from "@/libs/bullmq.js";
-import { IdempotencyKeyManager } from "@/utils/idempotency/IdempotencyManager.js";
+import { IdempotencyKeyManager } from "@/global/utils/idempotency/IdempotencyManager.js";
 
 /**
  * Factory function to create OrderProcessorService with dependencies

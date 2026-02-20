@@ -7,7 +7,7 @@ import type {
   PaymentRequest,
   PaymentResponse,
 } from "@/services/payment/payment-processor.js";
-import { DateUtils } from "@/utils/date.js";
+import { DateUtils } from "@/global/utils/date.js";
 
 type CardJWTPayload = JWTPayload & {
   card: CardData;

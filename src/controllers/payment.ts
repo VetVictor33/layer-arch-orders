@@ -1,7 +1,7 @@
 import { ROUTES } from "@/config/routes-paths.js";
 import { createCardTokenizationService } from "@/factories/card-tokenization-factory.js";
 import { CardSchema } from "@/global/schemas/card.js";
-import { DateUtils } from "@/utils/date.js";
+import { DateUtils } from "@/global/utils/date.js";
 import type { FastifyInstance } from "fastify";
 
 export const paymentRouters = [

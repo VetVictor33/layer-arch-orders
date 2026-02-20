@@ -7,7 +7,7 @@ import type {
   OrderCreatedTemplate,
   OrderPaidTemplate,
   PaymentDeniedTemplate,
-} from "@/utils/email-templates.js";
+} from "@/global/utils/email-templates.js";
 import { createEmailService } from "@/factories/EmailServiceFactory.js";
 
 /**

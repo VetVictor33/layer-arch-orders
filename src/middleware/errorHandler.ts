@@ -5,7 +5,7 @@ import { FastifyValidationErrorHandler } from "@/global/errorHandlers/FastifyVal
 import { RateLimitErrorHandler } from "@/global/errorHandlers/RateLimitErrorHandler.js";
 import { GenericErrorHandler } from "@/global/errorHandlers/GenericErrorHandler.js";
 import type { ErrorHandlerBase } from "@/global/errorHandlers/ErrorHandlerBase.js";
-import { DateUtils } from "@/utils/date.js";
+import { DateUtils } from "@/global/utils/date.js";
 
 export const registerErrorHandler = (server: FastifyInstance) => {
   const errorHandlers: ErrorHandlerBase[] = [

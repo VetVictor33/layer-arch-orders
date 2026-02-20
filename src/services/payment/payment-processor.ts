@@ -1,7 +1,7 @@
 import { LOGGER } from "@/libs/logger.js";
 import QueueManager from "@/libs/bullmq.js";
 import type { EmailJobData } from "@/workers/email.worker.js";
-import { EmailTemplateGenerator } from "@/utils/email-templates.js";
+import { EmailTemplateGenerator } from "@/global/utils/email-templates.js";
 import type { PaymentStatus } from "@/generated/prisma/enums.js";
 import type { Repository } from "@/repositories/RepositoryBase.js";
 import type { Order } from "@/generated/prisma/client.js";
