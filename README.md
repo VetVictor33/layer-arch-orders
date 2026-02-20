@@ -234,7 +234,7 @@ Response:
 
 The API implements **Rate Limiting** to prevent abuse:
 
-- **Global limit**: 10 requests per 120 seconds per IP
+- **Global limit**: n requests per X seconds per IP (configured on `src/config/rate-limit-configs.ts`)
 - **Skipped routes**: Admin UI (`/admin/queues`)
 - **Response headers**:
   - `X-RateLimit-Limit`: Maximum requests allowed
