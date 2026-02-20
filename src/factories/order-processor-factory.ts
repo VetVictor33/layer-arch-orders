@@ -1,4 +1,4 @@
-import OrderProcessorService from "@/services/order-processor.js";
+import OrderProcessorService from "@/services/order/order-processor.js";
 import { OrderRepository } from "@/repositories/OrderRepository.js";
 import QueueManager from "@/libs/bullmq.js";
 import { IdempotencyKeyManager } from "@/utils/idempotency/IdempotencyManager.js";

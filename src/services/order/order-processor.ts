@@ -9,7 +9,7 @@ import { EmailTemplateGenerator } from "@/utils/email-templates.js";
 import type { IRepository } from "@/repositories/RepositoryBase.js";
 import type QueueManager from "@/libs/bullmq.js";
 import type { IdempotencyKeyManager } from "@/utils/idempotency/IdempotencyManager.js";
-import type { PaymentRequest } from "@/services/payment-processor.js";
+import type { PaymentRequest } from "@/services/payment/payment-processor.js";
 
 type IdempotencyStoreData = {
   orderId: string;

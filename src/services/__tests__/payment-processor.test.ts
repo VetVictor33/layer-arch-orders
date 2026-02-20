@@ -1,10 +1,10 @@
 import type { Order } from "@/generated/prisma/client.js";
 import type { Repository } from "@/repositories/RepositoryBase.js";
-import { PaymentProcessorService } from "@/services/payment-processor.js";
+import { PaymentProcessorService } from "@/services/payment/payment-processor.js";
 import type {
   IPaymentGateway,
   PaymentRequest,
-} from "@/services/payment-processor.js";
+} from "@/services/payment/payment-processor.js";
 
 // Mock QueueManager getInstance to prevent real queue operations
 jest.mock("@/libs/bullmq.js");

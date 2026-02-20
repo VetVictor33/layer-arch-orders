@@ -6,7 +6,7 @@ import {
   PaymentProcessorService,
   type PaymentProcessorResult,
   type PaymentRequest,
-} from "@/services/payment-processor.js";
+} from "@/services/payment/payment-processor.js";
 import { DLQHandler, type JobFailureContext } from "@/workers/dlq-handler.js";
 import { createPaymentProcessorService } from "@/factories/PaymentProcessorFactory.js";
 
