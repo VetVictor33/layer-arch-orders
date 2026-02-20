@@ -1,20 +1,16 @@
-import http from "k6/http";
 import { check, group, sleep } from "k6";
-import { Rate, Trend, Counter } from "k6/metrics";
+import http from "k6/http";
+import { Counter, Rate, Trend } from "k6/metrics";
 import {
-  productIds,
-  cardNumbers,
-  firstNames,
-  lastNames,
-  MAX_IP_SUFFIX,
-  ipPatterns,
+  getEmail,
+  getRandomCard,
   getRandomElement,
   getRandomIP,
   getRandomName,
-  getEmail,
-  recentRequests,
   maxRecentRequests,
   OrderPayload,
+  productIds,
+  recentRequests,
 } from "./utils.ts";
 
 // Custom metrics
@@ -43,7 +39,7 @@ interface CardTokenPayload {
 
 function generateCardData(): CardTokenPayload {
   return {
-    number: getRandomElement(cardNumbers),
+    number: getRandomCard(),
     holderName: getRandomName().toUpperCase(),
     cvv: String(Math.floor(Math.random() * 900) + 100),
     expirationDate: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(
