@@ -25,6 +25,7 @@
     "db:down": "docker-compose down",
     "db:migrate-dev": "prisma migrate dev",
     "db:sync": "prisma migrate deploy",
+    "db:generate": "prisma generate",
     "sql:ui": "pnpm dlx prisma studio",
     "redis:ui": "pnpm dlx redis-commander@0.9.0 --redis-host localhost --redis-port 6379 --redis-password local --port 8081"
   },
