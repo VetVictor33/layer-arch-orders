@@ -1,4 +1,4 @@
-import type { RateLimitConfig } from "@/utils/rate-limiting/RateLimitingManager.js";
+import type { RateLimitConfig } from "@/global/utils/rate-limiting/RateLimitingManager.js";
 
 /**
  * Common rate limit configurations

@@ -1,15 +1,15 @@
 import Service from "@/services/service.js";
 import type { OrderInput } from "@/global/schemas/orders.js";
 import { LOGGER } from "@/libs/logger.js";
-import { orderCreationIdempotencyKeyGenerator } from "@/utils/idempotency/idempotency-generator.js";
+import { orderCreationIdempotencyKeyGenerator } from "@/global/utils/idempotency/idempotency-generator.js";
 import type { Order, PaymentStatus } from "@/generated/prisma/client.js";
 import { AppError } from "@/global/errors/AppError.js";
 import type { EmailJobData } from "@/workers/email.worker.js";
-import { EmailTemplateGenerator } from "@/utils/email-templates.js";
+import { EmailTemplateGenerator } from "@/global/utils/email-templates.js";
 import type { IRepository } from "@/repositories/RepositoryBase.js";
 import type QueueManager from "@/libs/bullmq.js";
-import type { IdempotencyKeyManager } from "@/utils/idempotency/IdempotencyManager.js";
-import type { PaymentRequest } from "@/services/payment-processor.js";
+import type { IdempotencyKeyManager } from "@/global/utils/idempotency/IdempotencyManager.js";
+import type { PaymentRequest } from "@/services/payment/payment-processor.js";
 
 type IdempotencyStoreData = {
   orderId: string;

@@ -115,12 +115,18 @@ pnpm start
 
 ### Payment Processing
 
-- **Deterministic Logic**:
-  - Odd prices → Payment approved
-  - Even prices → Payment denied
-  - Zero/negative prices → Error
-- **Mock Payment Gateway**: Full payment processing simulation with random delays (0-60s)
-- **Realistic Failures**: 50% failure rate for testing retry mechanisms
+- **Deterministic Card-Based Gateway**: Payment behavior controlled by card number patterns:
+  - **Payment Status** (last 2 digits):
+    - `XX00` → ERROR
+    - `XX10` → DENIED
+    - `XX20` → FAILED
+    - `XX30` → CANCELED
+    - `XX40` → PAID
+  - **Processing Time** (first 2 digits):
+    - `40...` → Immediate async processing (queue-based)
+    - `50...` → 10-30 second delay before processing
+- **Mock Payment Gateway**: Full payment processing simulation with controlled delays
+- **Standardized Card Numbers**: Predictable payment outcomes for testing
 
 ### Idempotency & Request Deduplication
 
@@ -212,11 +218,20 @@ Response:
 ```json
 {
   "orderId": "uuid",
-  "paymentStatus": "PENDING|PAID|DENIED|CANCELED",
+  "paymentStatus": "PENDING|PAID|DENIED|CANCELED|FAILED|ERROR",
   "paymentId": "PAY_xxx",
   "gatewayId": "MOCK_GATEWAY_001"
 }
 ```
+
+**Payment Status Values**:
+
+- `PENDING`: Order created, awaiting payment processing
+- `PAID`: Payment successfully processed
+- `DENIED`: Payment rejected by gateway
+- `FAILED`: Payment processing failed (transient error, may be retried)
+- `CANCELED`: Payment was canceled
+- `ERROR`: Gateway error (non-recoverable)
 
 ## Workflow
 
@@ -225,16 +240,17 @@ Response:
 3. **Order saved immediately** with PENDING status
 4. **Payment job enqueued** to Redis/BullMQ
 5. **Worker processes payment** asynchronously
-6. **Retry mechanism** (up to 3 attempts) if payment fails
-7. **Dead Letter Queue** for permanent failures
-8. **Order status updated** when payment completes
-9. **Monitor via Bull Board** at `/admin/queues`
+6. **Payment outcome determined** by card number pattern (status and processing time)
+7. **Retry mechanism** (up to 3 attempts) if payment fails
+8. **Dead Letter Queue** for permanent failures
+9. **Order status updated** when payment completes
+10. **Monitor via Bull Board** at `/admin/queues`
 
 ## Rate Limiting
 
 The API implements **Rate Limiting** to prevent abuse:
 
-- **Global limit**: 10 requests per 120 seconds per IP
+- **Global limit**: n requests per X seconds per IP (configured on `src/config/rate-limit-configs.ts`)
 - **Skipped routes**: Admin UI (`/admin/queues`)
 - **Response headers**:
   - `X-RateLimit-Limit`: Maximum requests allowed
@@ -254,6 +270,29 @@ Example 429 response:
   "timestamp": "2026-02-17T14:33:30.000Z"
 }
 ```
+
+## Testing Payment Gateway Behavior
+
+The mock payment gateway is deterministic and controlled by card number patterns. Use these test card numbers to simulate different scenarios:
+
+### Payment Status Testing
+
+| Card Pattern       | Status   | Use Case                                        |
+| ------------------ | -------- | ----------------------------------------------- |
+| `4032015112830300` | ERROR    | Test gateway errors (XX00 ending)               |
+| `4032015112830310` | DENIED   | Test denied payments (XX10 ending)              |
+| `4032015112830320` | FAILED   | Test failed payments with retries (XX20 ending) |
+| `4032015112830330` | CANCELED | Test canceled payments (XX30 ending)            |
+| `4032015112830340` | PAID     | Test successful payments (XX40 ending)          |
+
+### Processing Time Testing
+
+| Card Pattern       | Behavior                      | Use Case                            |
+| ------------------ | ----------------------------- | ----------------------------------- |
+| `4032015112830340` | Immediate async (queue-based) | Fast payment processing (40 prefix) |
+| `5032015112830340` | 10-30s delay                  | Slow payment processing (50 prefix) |
+
+**Note**: Combine both patterns (first 2 digits for timing, last 2 digits for status) to test comprehensive scenarios.
 
 ## Project Status
 

@@ -1,4 +1,5 @@
 import { getEnv } from "@/env.js";
+import { LOGGER } from "@/libs/logger.js";
 import { createClient, type RedisClientType } from "redis";
 
 export class RedisManager {
@@ -12,7 +13,7 @@ export class RedisManager {
     });
 
     this.client.on("error", (err) => {
-      console.error("Redis Client Error", err);
+      LOGGER.error("Redis Client Error", err);
     });
   }
 

@@ -1,7 +1,7 @@
 import {
   PaymentProcessorService,
   type IPaymentGateway,
-} from "@/services/payment-processor.js";
+} from "@/services/payment/payment-processor.js";
 import { PaymentGatewayMock } from "@/libs/__mocks__/payment-gateway.js";
 import { OrderRepository } from "@/repositories/OrderRepository.js";
 import type { Repository } from "@/repositories/RepositoryBase.js";

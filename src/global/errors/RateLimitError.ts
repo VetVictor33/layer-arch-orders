@@ -1,4 +1,4 @@
-import type { timestamp } from "@/utils/date.js";
+import type { timestamp } from "@/global/utils/date.js";
 
 export class RateLimitExceededError extends Error {
   constructor(

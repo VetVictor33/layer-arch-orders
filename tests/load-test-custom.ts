@@ -1,13 +1,13 @@
 import http from "http";
 import {
-  productIds,
-  cardNumbers,
+  getEmail,
+  getRandomCard,
   getRandomElement,
   getRandomIP,
   getRandomName,
-  getEmail,
-  recentRequests,
   maxRecentRequests,
+  productIds,
+  recentRequests,
   type Request,
 } from "./utils.ts";
 
@@ -233,7 +233,7 @@ function makeRequest(): Promise<void> {
     }
 
     const cardData: CardTokenPayload = {
-      number: getRandomElement(cardNumbers),
+      number: getRandomCard(),
       holderName: getRandomName().toUpperCase(),
       cvv: String(Math.floor(Math.random() * 900) + 100),
       expirationDate: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(

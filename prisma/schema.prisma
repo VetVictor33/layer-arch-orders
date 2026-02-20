@@ -37,4 +37,6 @@ enum PaymentStatus {
   PAID
   DENIED
   CANCELED
+  FAILED
+  ERROR
 }

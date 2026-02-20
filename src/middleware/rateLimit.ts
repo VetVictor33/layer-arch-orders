@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { getRateLimitingManagerInstance } from "@/utils/rate-limiting/RateLimitingManager.js";
-import type { RateLimitConfig } from "@/utils/rate-limiting/RateLimitingManager.js";
+import { getRateLimitingManagerInstance } from "@/global/utils/rate-limiting/RateLimitingManager.js";
+import type { RateLimitConfig } from "@/global/utils/rate-limiting/RateLimitingManager.js";
 import { RateLimitExceededError } from "@/global/errors/RateLimitError.js";
-import { DateUtils } from "@/utils/date.js";
+import { DateUtils } from "@/global/utils/date.js";
 import { type RoutePath } from "@/config/routes-paths.js";
 
 interface RateLimitOptions {

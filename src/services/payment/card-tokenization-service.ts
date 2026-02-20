@@ -1,5 +1,5 @@
 import { LOGGER } from "@/libs/logger.js";
-import type { IPaymentGateway } from "@/services/payment-processor.js";
+import type { IPaymentGateway } from "@/services/payment/payment-processor.js";
 import Service from "@/services/service.js";
 
 export interface CardData {

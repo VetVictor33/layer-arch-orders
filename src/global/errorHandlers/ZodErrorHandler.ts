@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 import z from "zod";
 import { ErrorHandlerBase, type ErrorResponse } from "./ErrorHandlerBase.js";
-import { DateUtils } from "@/utils/date.js";
+import { DateUtils } from "@/global/utils/date.js";
 
 export class ZodErrorHandler extends ErrorHandlerBase {
   canHandle(error: Error): boolean {

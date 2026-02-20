@@ -1,7 +1,7 @@
 import { LOGGER } from "@/libs/logger.js";
 import QueueManager from "@/libs/bullmq.js";
 import type { EmailJobData } from "@/workers/email.worker.js";
-import { EmailTemplateGenerator } from "@/utils/email-templates.js";
+import { EmailTemplateGenerator } from "@/global/utils/email-templates.js";
 import type { PaymentStatus } from "@/generated/prisma/enums.js";
 import type { Repository } from "@/repositories/RepositoryBase.js";
 import type { Order } from "@/generated/prisma/client.js";
@@ -103,19 +103,14 @@ export class PaymentProcessorService extends Service {
         paymentRequest.amount,
       );
       logMessage = "Order paid email queued";
-    } else if (payment.status === "DENIED") {
+    } else {
       template = EmailTemplateGenerator.generatePaymentDeniedTemplate(
         paymentRequest.customerName,
         order.id,
         paymentRequest.amount,
-        payment.denialReason || "Payment declined",
+        `Status:${payment.status} - ${payment.denialReason || "Payment declined"}`,
       );
       logMessage = "Payment denied email queued";
-    } else {
-      LOGGER.warn(
-        `No email for order ${order.id} on status ${payment.status}.`,
-      );
-      return; // No email for other statuses
     }
 
     await queueManager.addJob<EmailJobData>("email-notifications", {

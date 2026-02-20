@@ -1,5 +1,5 @@
 import { CardTokenizationService } from "@/services/payment/card-tokenization-service.js";
-import type { IPaymentGateway } from "@/services/payment-processor.js";
+import type { IPaymentGateway } from "@/services/payment/payment-processor.js";
 import { LOGGER } from "@/libs/logger.js";
 
 describe("CardTokenizationService", () => {

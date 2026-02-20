@@ -1,4 +1,4 @@
-import OrderProcessorService from "@/services/order-processor.js";
+import OrderProcessorService from "@/services/order/order-processor.js";
 import type { OrderInput } from "@/global/schemas/orders.js";
 
 // Mock QueueManager to prevent real queue operations

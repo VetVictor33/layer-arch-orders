@@ -1,7 +1,7 @@
 import { getEnv } from "@/env.js";
 import { AppError } from "@/global/errors/AppError.js";
 import { ErrorHandlerBase, type ErrorResponse } from "./ErrorHandlerBase.js";
-import { DateUtils } from "@/utils/date.js";
+import { DateUtils } from "@/global/utils/date.js";
 
 export class GenericErrorHandler extends ErrorHandlerBase {
   canHandle(): boolean {
