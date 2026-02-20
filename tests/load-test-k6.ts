@@ -34,6 +34,24 @@ const rateLimitedRate = new Rate("rate_limited_rate");
 
 // Test data and helpers imported from ./utils.ts
 
+interface CardTokenPayload {
+  number: string;
+  holderName: string;
+  cvv: string;
+  expirationDate: string;
+}
+
+function generateCardData(): CardTokenPayload {
+  return {
+    number: getRandomElement(cardNumbers),
+    holderName: getRandomName().toUpperCase(),
+    cvv: String(Math.floor(Math.random() * 900) + 100),
+    expirationDate: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(
+      new Date().getFullYear() + Math.floor(Math.random() * 5) + 1,
+    ).slice(-2)}`,
+  };
+}
+
 function generateOrderPayload(useRecent = false): OrderPayload {
   let name: string;
   let productId: string;
@@ -62,14 +80,7 @@ function generateOrderPayload(useRecent = false): OrderPayload {
     },
     payment: {
       type: "CARD",
-      card: {
-        number: getRandomElement(cardNumbers),
-        holderName: getRandomName().toUpperCase(),
-        cvv: String(Math.floor(Math.random() * 900) + 100),
-        expirationDate: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(
-          new Date().getFullYear() + Math.floor(Math.random() * 5) + 1,
-        ).slice(-2)}`,
-      },
+      card: generateCardData(),
     },
   };
 
@@ -120,7 +131,8 @@ export const options: Options = {
 export default function (): void {
   // 95% normal requests, 5% idempotency tests
   const useRecent = Math.random() < 0.05 && recentRequests.length > 0;
-  const payload = generateOrderPayload(useRecent);
+  const cardData = generateCardData();
+  const orderPayload = generateOrderPayload(useRecent);
 
   const params = {
     headers: {
@@ -130,10 +142,56 @@ export default function (): void {
     timeout: "60s",
   };
 
+  let cardToken = "";
+
+  // Step 1: Tokenize card
+  group("Tokenize Card", () => {
+    const res = http.post(
+      "http://localhost:3333/payment/card-token",
+      JSON.stringify(cardData),
+      params,
+    );
+
+    requestCount.add(1);
+    p95ResponseTime.add(res.timings.duration);
+
+    const is200s = res.status >= 200 && res.status < 300;
+    const isSuccess = is200s;
+
+    check(res, {
+      "tokenization status is 2xx": () => is200s,
+      "tokenization response time < 2s": () => res.timings.duration < 2000,
+    });
+
+    successRate.add(isSuccess);
+    errorRate.add(!isSuccess);
+
+    if (isSuccess) {
+      successCount.add(1);
+      const responseBody = JSON.parse(String(res.body));
+      cardToken = responseBody.token;
+    } else {
+      errorCount.add(1);
+    }
+  });
+
+  // Step 2: Create order with tokenized card
   group("Create Order", () => {
+    if (!cardToken) {
+      // Skip order creation if tokenization failed
+      return;
+    }
+
+    const orderPayloadWithToken = {
+      ...orderPayload,
+      cardToken,
+    };
+    // Remove card data from payload since we have the token
+    orderPayloadWithToken.payment = undefined!;
+
     const res = http.post(
       "http://localhost:3333/order",
-      JSON.stringify(payload),
+      JSON.stringify(orderPayloadWithToken),
       params,
     );
 
@@ -143,24 +201,19 @@ export default function (): void {
     const is200s = res.status >= 200 && res.status < 300;
     const isRateLimited = res.status === 429;
     const isSuccess = is200s || isRateLimited;
-    const isIdempotencyTest = useRecent;
 
     check(res, {
-      "status is 200-299 or 429": () => isSuccess,
-      "status is not 500": () => res.status !== 500,
-      "response time < 5s": () => res.timings.duration < 5000,
+      "order status is 200-299 or 429": () => isSuccess,
+      "order status is not 500": () => res.status !== 500,
+      "order response time < 5s": () => res.timings.duration < 5000,
     });
 
     successRate.add(isSuccess);
     errorRate.add(!isSuccess);
-    idempotencyHitRate.add(isIdempotencyTest);
     rateLimitedRate.add(isRateLimited);
 
     if (isSuccess) {
       successCount.add(1);
-      if (isIdempotencyTest) {
-        idempotencyHits.add(1);
-      }
       if (isRateLimited) {
         rateLimitedCount.add(1);
       }
