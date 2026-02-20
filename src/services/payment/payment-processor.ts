@@ -103,19 +103,14 @@ export class PaymentProcessorService extends Service {
         paymentRequest.amount,
       );
       logMessage = "Order paid email queued";
-    } else if (payment.status === "DENIED") {
+    } else {
       template = EmailTemplateGenerator.generatePaymentDeniedTemplate(
         paymentRequest.customerName,
         order.id,
         paymentRequest.amount,
-        payment.denialReason || "Payment declined",
+        `Status:${payment.status} - ${payment.denialReason || "Payment declined"}`,
       );
       logMessage = "Payment denied email queued";
-    } else {
-      LOGGER.warn(
-        `No email for order ${order.id} on status ${payment.status}.`,
-      );
-      return; // No email for other statuses
     }
 
     await queueManager.addJob<EmailJobData>("email-notifications", {
