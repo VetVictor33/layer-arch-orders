@@ -27,6 +27,8 @@ describe("OrderProcessorService", () => {
   let mockOrderRepository: jest.Mocked<IOrderRepository>;
   let mockQueueService: jest.Mocked<IQueueService>;
   let mockIdempotencyManager: jest.Mocked<IIdempotencyManager>;
+  const cardToken =
+    "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..WdyhvBpisspzKELw6OwSJg.l-H_fzvqRfe_eCLg7Phco6TakXFw2YfifHpzUILjYKHBBMY959UAYjw5q-nSTlYqGtPJyJBaQthWTziu-8jEettjzo1TfthZN3IuG93M2wQR9_l_t_18eRUaOV-8pFGw35jf0tWdhaBQburn45j5EDPw1r7m5vFtz31ISi1bJVs.bynQ5TAxcWoWQaIsgfkIbQ";
 
   beforeEach(() => {
     mockOrderRepository = {
@@ -58,15 +60,7 @@ describe("OrderProcessorService", () => {
       const orderInput: OrderInput = {
         customer: { name: "John Doe", email: "john@example.com" },
         product: { id: "prod-1", price: 99.99 },
-        payment: {
-          type: "CARD",
-          card: {
-            number: "4111111111111111",
-            holderName: "John Doe",
-            cvv: "123",
-            expirationDate: "12/25",
-          },
-        },
+        cardToken,
       };
 
       const mockOrder = {
@@ -95,7 +89,7 @@ describe("OrderProcessorService", () => {
         customerEmail: orderInput.customer.email,
         customerName: orderInput.customer.name,
         paymentStatus: "PENDING",
-        paymentType: orderInput.payment.type,
+        paymentType: "CARD",
         price: orderInput.product.price,
         productId: orderInput.product.id,
       });
@@ -106,15 +100,7 @@ describe("OrderProcessorService", () => {
       const orderInput: OrderInput = {
         customer: { name: "Jane Doe", email: "jane@example.com" },
         product: { id: "prod-2", price: 149.99 },
-        payment: {
-          type: "CARD",
-          card: {
-            number: "4111111111111111",
-            holderName: "Jane Doe",
-            cvv: "456",
-            expirationDate: "11/26",
-          },
-        },
+        cardToken,
       };
 
       mockIdempotencyManager.retrieve.mockResolvedValue({

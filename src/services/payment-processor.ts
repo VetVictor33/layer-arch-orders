@@ -19,7 +19,7 @@ export interface PaymentRequest {
   amount: number;
   customerEmail: string;
   customerName: string;
-  card: CardData;
+  cardToken: string;
 }
 
 export interface PaymentResponse {
@@ -30,11 +30,16 @@ export interface PaymentResponse {
   denialReason?: string;
 }
 
+export interface CardTokenizationResponse {
+  token: string;
+}
+
 /**
  * Payment Gateway Interface - Contract for payment processing implementations
  */
 export interface IPaymentGateway {
   processPayment(request: PaymentRequest): Promise<PaymentResponse>;
+  tokenizeCard(cardData: CardData): Promise<CardTokenizationResponse>;
 }
 export interface PaymentProcessorResult {
   success: boolean;

@@ -15,6 +15,8 @@ describe("PaymentProcessorService", () => {
   let paymentProcessor: PaymentProcessorService;
   let mockPaymentGateway: jest.Mocked<IPaymentGateway>;
   let mockOrderRepository: jest.Mocked<Repository<Order>>;
+  const cardToken =
+    "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..WdyhvBpisspzKELw6OwSJg.l-H_fzvqRfe_eCLg7Phco6TakXFw2YfifHpzUILjYKHBBMY959UAYjw5q-nSTlYqGtPJyJBaQthWTziu-8jEettjzo1TfthZN3IuG93M2wQR9_l_t_18eRUaOV-8pFGw35jf0tWdhaBQburn45j5EDPw1r7m5vFtz31ISi1bJVs.bynQ5TAxcWoWQaIsgfkIbQ";
 
   beforeEach(() => {
     // Setup QueueManager mock
@@ -24,6 +26,7 @@ describe("PaymentProcessorService", () => {
 
     mockPaymentGateway = {
       processPayment: jest.fn(),
+      tokenizeCard: jest.fn().mockResolvedValue(cardToken),
     };
 
     mockOrderRepository = {
@@ -47,12 +50,7 @@ describe("PaymentProcessorService", () => {
         amount: 99.99,
         customerEmail: "john@example.com",
         customerName: "John Doe",
-        card: {
-          number: "4111111111111111",
-          holderName: "John Doe",
-          cvv: "123",
-          expirationDate: "12/25",
-        },
+        cardToken,
       };
 
       const mockPaymentResponse = {
@@ -95,12 +93,7 @@ describe("PaymentProcessorService", () => {
         amount: 100,
         customerEmail: "jane@example.com",
         customerName: "Jane Doe",
-        card: {
-          number: "4111111111111111",
-          holderName: "Jane Doe",
-          cvv: "456",
-          expirationDate: "11/26",
-        },
+        cardToken,
       };
 
       const mockPaymentResponse = {
@@ -142,12 +135,7 @@ describe("PaymentProcessorService", () => {
         amount: 50,
         customerEmail: "error@example.com",
         customerName: "Error User",
-        card: {
-          number: "4111111111111111",
-          holderName: "Error User",
-          cvv: "789",
-          expirationDate: "10/27",
-        },
+        cardToken,
       };
 
       const error = new Error("Gateway connection failed");

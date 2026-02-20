@@ -25,7 +25,7 @@ export const lastNames = [
 ];
 
 // IP address patterns with placeholder `X` that will be replaced with a suffix number
-export const MAX_IP_SUFFIX = 50; // default upper bound (1..50)
+export const MAX_IP_SUFFIX = 10; // default upper bound
 export const ipPatterns = [
   "192.168.1.X",
   "10.0.0.X",

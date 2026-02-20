@@ -131,6 +131,13 @@ function getIdempotencyRequestData(): Request | null {
   return recentRequests[Math.floor(Math.random() * recentRequests.length)];
 }
 
+interface CardTokenPayload {
+  number: string;
+  holderName: string;
+  cvv: string;
+  expirationDate: string;
+}
+
 interface RequestPayload {
   product: {
     id: string;
@@ -140,15 +147,62 @@ interface RequestPayload {
     name: string;
     email: string;
   };
-  payment: {
-    type: string;
-    card: {
-      number: string;
-      holderName: string;
-      cvv: string;
-      expirationDate: string;
-    };
-  };
+  cardToken: string;
+}
+
+function tokenizeCard(
+  cardData: CardTokenPayload,
+  onComplete: (token: string | null) => void,
+): void {
+  const cardPayloadString = JSON.stringify(cardData);
+
+  const req = http.request(
+    {
+      hostname: HOST,
+      port: PORT,
+      path: "/payment/card-token",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(cardPayloadString),
+        "X-Forwarded-For": getRandomIP(),
+        "User-Agent": `LoadTest/${Math.random()}`,
+      },
+      timeout: REQUEST_TIMEOUT,
+    },
+    (res) => {
+      let data = "";
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+      res.on("end", () => {
+        const statusCode = res.statusCode || 0;
+
+        if (statusCode >= 200 && statusCode < 300) {
+          try {
+            const response = JSON.parse(data);
+            onComplete(response.token);
+          } catch {
+            onComplete(null);
+          }
+        } else {
+          onComplete(null);
+        }
+      });
+    },
+  );
+
+  req.on("error", () => {
+    onComplete(null);
+  });
+
+  req.on("timeout", () => {
+    req.destroy();
+    onComplete(null);
+  });
+
+  req.write(cardPayloadString);
+  req.end();
 }
 
 function makeRequest(): Promise<void> {
@@ -178,132 +232,143 @@ function makeRequest(): Promise<void> {
       price = Math.floor(Math.random() * 100 + 50);
     }
 
-    const payload: RequestPayload = {
-      product: {
-        id: productId,
-        price,
-      },
-      customer: {
-        name: randomName,
-        email: getEmail(randomName),
-      },
-      payment: {
-        type: "CARD",
-        card: {
-          number: getRandomElement(cardNumbers),
-          holderName: getRandomName().toUpperCase(),
-          cvv: String(Math.floor(Math.random() * 900) + 100),
-          expirationDate: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(
-            new Date().getFullYear() + Math.floor(Math.random() * 5) + 1,
-          ).slice(-2)}`,
-        },
-      },
+    const cardData: CardTokenPayload = {
+      number: getRandomElement(cardNumbers),
+      holderName: getRandomName().toUpperCase(),
+      cvv: String(Math.floor(Math.random() * 900) + 100),
+      expirationDate: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(
+        new Date().getFullYear() + Math.floor(Math.random() * 5) + 1,
+      ).slice(-2)}`,
     };
 
-    const payloadString = JSON.stringify(payload);
+    // First: Tokenize the card
+    tokenizeCard(cardData, (cardToken: string | null) => {
+      if (!cardToken) {
+        // Card tokenization failed, skip order creation
+        errorCount++;
+        totalRequests++;
+        resolve();
+        return;
+      }
 
-    const req = http.request(
-      {
-        hostname: HOST,
-        port: PORT,
-        path: "/order",
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payloadString),
-          "X-Forwarded-For": getRandomIP(),
-          "User-Agent": `LoadTest/${Math.random()}`,
+      // Second: Create order with tokenized card
+      const orderPayload = {
+        product: {
+          id: productId,
+          price,
         },
-        timeout: REQUEST_TIMEOUT,
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk) => {
-          data += chunk;
-        });
-        res.on("end", () => {
-          const duration = Date.now() - startTime;
-          responseTimes.push(duration);
+        customer: {
+          name: randomName,
+          email: getEmail(randomName),
+        },
+        cardToken,
+      };
 
-          const statusCode = res.statusCode || 0;
-          statusCodeCounts[statusCode] =
-            (statusCodeCounts[statusCode] || 0) + 1;
+      const payloadString = JSON.stringify(orderPayload);
 
-          // Log idempotency hit - same response suggests cache hit
-          if (isIdempotencyTest && statusCode >= 200 && statusCode < 400) {
-            idempotencyHitCount++;
-          }
+      const req = http.request(
+        {
+          hostname: HOST,
+          port: PORT,
+          path: "/order",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(payloadString),
+            "X-Forwarded-For": getRandomIP(),
+            "User-Agent": `LoadTest/${Math.random()}`,
+          },
+          timeout: REQUEST_TIMEOUT,
+        },
+        (res) => {
+          let data = "";
+          res.on("data", (chunk) => {
+            data += chunk;
+          });
+          res.on("end", () => {
+            const duration = Date.now() - startTime;
+            responseTimes.push(duration);
 
-          if (statusCode === 429) {
-            rateLimitCount++;
-          } else if (statusCode >= 200 && statusCode < 400) {
-            successCount++;
-          } else {
-            errorCount++;
-            addErrorLog(
-              statusCode,
-              "http_error",
-              `HTTP ${statusCode}`,
-              data,
-              duration,
-              payload,
-            );
-          }
-          totalRequests++;
-          resolve();
-        });
-      },
-    );
+            const statusCode = res.statusCode || 0;
+            statusCodeCounts[statusCode] =
+              (statusCodeCounts[statusCode] || 0) + 1;
 
-    req.on("error", (err) => {
-      const duration = Date.now() - startTime;
-      networkErrorCount++;
-      errorCount++;
-      totalRequests++;
-      addErrorLog(
-        undefined,
-        "network",
-        `Network error: ${(err as Error).message || "Unknown"}`,
-        undefined,
-        duration,
-        payload,
+            // Log idempotency hit - same response suggests cache hit
+            if (isIdempotencyTest && statusCode >= 200 && statusCode < 400) {
+              idempotencyHitCount++;
+            }
+
+            if (statusCode === 429) {
+              rateLimitCount++;
+            } else if (statusCode >= 200 && statusCode < 400) {
+              successCount++;
+            } else {
+              errorCount++;
+              addErrorLog(
+                statusCode,
+                "http_error",
+                `HTTP ${statusCode}`,
+                data,
+                duration,
+                orderPayload,
+              );
+            }
+            totalRequests++;
+            resolve();
+          });
+        },
       );
-      resolve();
-    });
 
-    req.on("timeout", () => {
-      req.destroy();
-      const duration = Date.now() - startTime;
-      errorCount++;
-      totalRequests++;
-      addErrorLog(
-        undefined,
-        "timeout",
-        "Request timeout (5s exceeded)",
-        undefined,
-        duration,
-        payload,
-      );
-      resolve();
-    });
-
-    // Store request data for potential idempotency retests (shared array)
-    if (!isIdempotencyTest) {
-      recentRequests.push({
-        name: randomName,
-        email: getEmail(randomName),
-        productId,
-        price,
-        timestamp: Date.now(),
+      req.on("error", (err) => {
+        const duration = Date.now() - startTime;
+        networkErrorCount++;
+        errorCount++;
+        totalRequests++;
+        addErrorLog(
+          undefined,
+          "network",
+          `Network error: ${(err as Error).message || "Unknown"}`,
+          undefined,
+          duration,
+          orderPayload,
+        );
+        resolve();
       });
 
-      if (recentRequests.length > maxRecentRequests) {
-        recentRequests.shift();
-      }
-    }
+      req.on("timeout", () => {
+        req.destroy();
+        const duration = Date.now() - startTime;
+        errorCount++;
+        totalRequests++;
+        addErrorLog(
+          undefined,
+          "timeout",
+          "Request timeout exceeded",
+          undefined,
+          duration,
+          orderPayload,
+        );
+        resolve();
+      });
 
-    req.write(payloadString);
-    req.end();
+      // Store request data for potential idempotency retests (shared array)
+      if (!isIdempotencyTest) {
+        recentRequests.push({
+          name: randomName,
+          email: getEmail(randomName),
+          productId,
+          price,
+          timestamp: Date.now(),
+        });
+
+        if (recentRequests.length > maxRecentRequests) {
+          recentRequests.shift();
+        }
+      }
+
+      req.write(payloadString);
+      req.end();
+    });
   });
 }
 

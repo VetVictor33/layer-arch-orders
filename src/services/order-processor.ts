@@ -47,22 +47,20 @@ export default class OrderProcessorService extends Service {
       customerEmail: input.customer.email,
       customerName: input.customer.name,
       paymentStatus: "PENDING",
-      paymentType: input.payment.type,
+      paymentType: "CARD",
       price: input.product.price,
       productId: input.product.id,
     });
 
-    await this.storeResponseFormIdempotency(order);
+    await this.storeResponseForIdempotency(order);
 
     // Queue payment processing
-    // TO-DO: critical -> this saves sensitive data to our DB (card data).
-    // Implement card tokenization to avoid it
     await this.queueService.addJob<PaymentRequest>("payment-processing", {
       orderId: order.id,
       customerName: input.customer.name,
       customerEmail: input.customer.email,
       amount: input.product.price,
-      card: input.payment.card,
+      cardToken: input.cardToken,
     });
 
     LOGGER.info(`Payment for order ${order.id} queued.`);
@@ -116,7 +114,7 @@ export default class OrderProcessorService extends Service {
     this.idemKey = idemKey;
   }
 
-  private async storeResponseFormIdempotency(order: Order) {
+  private async storeResponseForIdempotency(order: Order) {
     if (!this.idemKey) {
       LOGGER.fatal("Unexpected lack of idemKey on OrderProcessorService");
       throw new AppError(500, "Internal server error");

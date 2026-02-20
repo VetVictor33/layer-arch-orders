@@ -1,10 +1,21 @@
+import { JWT, type JWTPayload } from "@/libs/jwt.js";
 import { LOGGER } from "@/libs/logger.js";
 import type {
+  CardData,
+  CardTokenizationResponse,
   IPaymentGateway,
   PaymentRequest,
   PaymentResponse,
 } from "@/services/payment-processor.js";
 import { DateUtils } from "@/utils/date.js";
+
+type CardJWTPayload = JWTPayload & {
+  payload: CardData;
+};
+
+interface PaymentExecutePayload extends Omit<PaymentRequest, "cardToken"> {
+  card: CardData;
+}
 
 /**
  * Mock Payment Gateway Implementation
@@ -13,12 +24,39 @@ import { DateUtils } from "@/utils/date.js";
  * - Odd price -> PAID
  * - Even price -> DENIED
  * - Zero or negative -> DENIED
- * - 50% chance to randomly throw error for retry testing
+ * - Chance to randomly throw error for retry testing
  */
 export class PaymentGatewayMock implements IPaymentGateway {
   private gatewayId = "MOCK_GATEWAY_001";
 
-  async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
+  async processPayment({
+    cardToken,
+    ...remainingRequestData
+  }: PaymentRequest): Promise<PaymentResponse> {
+    const { payload } = await this.decryptCardToken(cardToken);
+    return this.executePayment({
+      ...remainingRequestData,
+      card: payload,
+    });
+  }
+
+  async tokenizeCard(cardData: CardData): Promise<CardTokenizationResponse> {
+    const jwt = await new JWT().encrypt<CardJWTPayload>({
+      data: { payload: cardData },
+      expiresIn: "5min",
+    });
+    return { token: jwt };
+  }
+
+  async decryptCardToken(tokenizedCard: string): Promise<CardJWTPayload> {
+    return await new JWT().decrypt(tokenizedCard);
+  }
+
+  private async executePayment(
+    request: PaymentExecutePayload,
+  ): Promise<PaymentResponse> {
+    //TODO - Move payment status logic to a Card class that will decide the payment status based on a range o cards
+
     // Simulate processing delay (random between 1-30 seconds)
     const randomDelay = Math.random() * 30000;
     // 30% of change of no delay
