@@ -1,7 +1,7 @@
 # Objetivos
 
 Criar uma API responsável por receber requisições de pagamentos com cartão de crédito que seja capaz de lidar com alta carga, idempotência e mensageira.
-O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber uma requisição, sem comportamento deve ser determinístico conforme os critérios de produto.
+O intuito é ter um produto resiliente e confiável. Ou seja, quando ele receber uma requisição, seu comportamento deve ser determinístico conforme os critérios de produto.
 
 # Critérios de produto (MVP)
 
